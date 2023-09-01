@@ -9,4 +9,4 @@ exclude_list = [
 ]
 cache_dir = "./cache/"
 password = "123456"
-enable_progress = False
+enable_progress = True

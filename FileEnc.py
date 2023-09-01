@@ -64,9 +64,9 @@ class FileEnc:
                 new.write(enc_len.to_bytes(4, "big"))
                 new.write(encrypted)
 
-                progress = Decimal(count / os.path.getsize(file)) * 100
-                progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
                 if progress_bar:
+                    progress = Decimal(count / os.path.getsize(file)) * 100
+                    progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
                     progress_bar.n = int(progress)
 
             new.write(encrypt_util.finalize())
