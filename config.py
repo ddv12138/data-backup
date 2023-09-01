@@ -9,7 +9,7 @@ exclude_list = [
 ]
 cache_dir = "./cache/"
 password = "123456"
-enable_progress = True
+enable_progress = False
 cloud_path = "mnt-backup"
 aligo_config_path = "aligo_config"
 cron_expression = "*/1 * * * * "

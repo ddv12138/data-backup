@@ -47,6 +47,7 @@ class AligoUtil:
         if curr_count > max_count:
             for _ in range(curr_count - max_count):
                 old = history.pop()
+                log.info(f"删除过期备份 {old}")
                 self.aligo.move_file_to_trash(file_id=old.file_id)
 
 
