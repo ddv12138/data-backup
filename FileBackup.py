@@ -22,7 +22,7 @@ class FileBackup:
 
     def start_backup(self):
         current_datetime = datetime.now()
-        formatted_date = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        formatted_date = current_datetime.strftime("%Y-%m-%d %H.%M.%S")
         config.cache_dir = config.cache_dir + formatted_date
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(

@@ -2,4 +2,4 @@ __pycache__
 .idea
 cache
 example
-config.py
+email_config.py
