@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import sys
 import tarfile
 from datetime import datetime
@@ -23,7 +24,6 @@ class FileBackup:
     def start_backup(self):
         current_datetime = datetime.now()
         formatted_date = current_datetime.strftime("%Y-%m-%d %H.%M.%S")
-        config.cache_dir = config.cache_dir + formatted_date
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(
             f"文件扫描完毕，扫描结果包含{len(file_list)}个文件，忽略{len(ignore_list)}个文件，出现{len(err_list)}个错误")
@@ -32,7 +32,7 @@ class FileBackup:
         file_enc = FileEnc(passwd=config.password)
         enc_file = tar_file + ".enc"
         file_enc.encrypt(tar_file, enc_file)
-        split_output = os.path.normpath(config.cache_dir + "/split")
+        split_output = os.path.normpath(config.cache_dir+ formatted_date + "/"+formatted_date)
         self.split_tar_file(enc_file, split_output)
         return split_output
 
@@ -125,3 +125,22 @@ class FileBackup:
 
                     split_tar.write(chunk)
                     current_split_size += len(chunk)
+
+
+def clear_cache():
+    directory_path = config.cache_dir
+    try:
+        # 确保目录存在
+        if os.path.exists(directory_path):
+            # 遍历目录中的文件和子目录
+            for root, dirs, files in os.walk(directory_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # 删除文件
+                    os.remove(file_path)
+                for dir in dirs:
+                    dir_path = os.path.join(root, dir)
+                    # 删除子目录
+                    shutil.rmtree(dir_path)
+    except Exception as e:
+        print(f"清空目录出错：{str(e)}")
