@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 
 import logging
 
+import config
+
 logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(lineno)d - %(message)s"
                     , level=logging.DEBUG)
 log = logging.getLogger(Path(__file__).stem)
@@ -46,7 +48,9 @@ class FileEnc:
             file = realpath
         # 创建一个加密器
         encrypt_util = self.cipher.encryptor()
-        progress_bar = tqdm(total=100, desc="" + file + " --> Processing encrypt", file=sys.stderr)
+        progress_bar = None
+        if config.enable_progress:
+            progress_bar = tqdm(total=100, desc="" + file + " --> Processing encrypt", file=sys.stderr)
         with open(file, "rb") as old, open(output, "wb") as new:
             new.write(self.nonce)
             count = 0
@@ -62,14 +66,18 @@ class FileEnc:
 
                 progress = Decimal(count / os.path.getsize(file)) * 100
                 progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
-                progress_bar.n = int(progress)
+                if progress_bar:
+                    progress_bar.n = int(progress)
 
             new.write(encrypt_util.finalize())
-        progress_bar.close()
+        if progress_bar:
+            progress_bar.close()
         # log.debug("初始大小：%d，加密后大小：%d，", os.path.getsize(file), os.path.getsize(output))
 
     def decrypt(self, file: str, output: str):
-        progress_bar = tqdm(total=100, desc="" + file + " --> Processing decrypt", file=sys.stderr)
+        progress_bar = None
+        if config.enable_progress:
+            progress_bar = tqdm(total=100, desc="" + file + " --> Processing decrypt", file=sys.stderr)
         with open(file, "rb") as old, open(output, "wb") as new:
             # 创建一个解密器
             self.nonce = old.read(16)
@@ -88,10 +96,11 @@ class FileEnc:
                 dec = decrypt_util.update(old_trunk)
                 new.write(dec)
 
-                progress = Decimal(count / os.path.getsize(file)) * 100
-                progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
-                progress_bar.n = int(progress)
-                progress_bar.refresh()
+                if progress_bar:
+                    progress = Decimal(count / os.path.getsize(file)) * 100
+                    progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
+                    progress_bar.n = int(progress)
+                    progress_bar.refresh()
             new.write(decrypt_util.finalize())
         pass
 

@@ -61,16 +61,48 @@ def fetch_file() -> []:
 
 
 def tar_package(files: list) -> str:
-    progress_bar = tqdm(total=len(files), desc="文件打包中....", file=sys.stderr)
+    progress_bar = None
+    if config.enable_progress:
+        progress_bar = tqdm(total=len(files), desc="文件打包中....", file=sys.stderr)
     target = config.cache_dir + "/package.tar.gz"
     target = os.path.normpath(target)
     with tarfile.open(target, 'w:gz') as zipf:
         for f in files:
             filename = f.replace(os.path.normpath(config.cache_dir), "")
             zipf.add(f, arcname="/" + filename)
-            progress_bar.update(1)
-    progress_bar.close()
+            if progress_bar:
+                progress_bar.update(1)
+    if progress_bar:
+        progress_bar.close()
     return target
+
+
+def split_tar_file(input_tar_file, output_dir, split_size=10 * 1024 * 1024):
+    with open(input_tar_file, 'rb') as tar_file:
+        current_split = 1
+        current_split_size = 0
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        filename = os.path.split(input_tar_file)[1]
+        split_tar_filename = os.path.join(output_dir, f"{filename}_{current_split}.tar")
+
+        with open(split_tar_filename, 'wb') as split_tar:
+            while True:
+                chunk = tar_file.read(4096)  # 读取一小块数据
+                if not chunk:
+                    break
+
+                # 如果当前块的大小超过了拆分大小，创建新的分割文件
+                if current_split_size + len(chunk) > split_size:
+                    split_tar.close()
+                    current_split += 1
+                    current_split_size = 0
+                    split_tar_filename = os.path.join(output_dir, f"{filename}_{current_split}.tar")
+                    split_tar = open(split_tar_filename, 'wb')
+
+                split_tar.write(chunk)
+                current_split_size += len(chunk)
 
 
 if __name__ == '__main__':
@@ -84,5 +116,6 @@ if __name__ == '__main__':
     file_enc = FileEnc(passwd=config.password)
     enc_file = tar_file + ".enc"
     file_enc.encrypt(tar_file, enc_file)
+    split_tar_file(enc_file, os.path.normpath(config.cache_dir + "/split"))
     # file_enc = FileEnc(passwd=config.password + "")
     # file_enc.decrypt(file=enc_file, output=enc_file + ".tar.gz")

@@ -4,7 +4,9 @@ include_list = [
 ]
 exclude_list = [
     ".DS_Store",
-    ".gitignore"
+    ".gitignore",
+    ".hidden-file"
 ]
 cache_dir = "./cache/"
 password = "123456"
+enable_progress = False
