@@ -19,7 +19,7 @@ logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(li
 log = logging.getLogger(Path(__file__).stem)
 
 
-class FileEnc:
+class EncUtil:
 
     def __init__(self, passwd: str, buffer_size: int = 1024 * 1024 * 100) -> None:
         super().__init__()
@@ -39,7 +39,7 @@ class FileEnc:
         )
         return kdf.derive(passwd.encode("utf-8")).hex()
 
-    def encrypt(self, file: str, output: str):
+    def encrypt_file(self, file: str, output: str):
 
         if os.path.islink(file):
             realpath = os.path.realpath(file)
@@ -74,7 +74,7 @@ class FileEnc:
             progress_bar.close()
         # log.debug("初始大小：%d，加密后大小：%d，", os.path.getsize(file), os.path.getsize(output))
 
-    def decrypt(self, file: str, output: str):
+    def decrypt_file(self, file: str, output: str):
         progress_bar = None
         if config.enable_progress:
             progress_bar = tqdm(total=100, desc="" + file + " --> Processing decrypt", file=sys.stderr)
@@ -103,6 +103,21 @@ class FileEnc:
                     progress_bar.refresh()
             new.write(decrypt_util.finalize())
         pass
+
+    def encrypt_bytes(self, chunk: bytes):
+        # 创建一个加密器
+        encrypt_util = self.cipher.encryptor()
+        enc_data = encrypt_util.update(chunk)
+        enc_data += encrypt_util.finalize()
+        log.debug(f"加密前大小{len(bytes)},加密后{len(enc_data)}")
+        return enc_data
+
+    def decrypt_bytes(self, chunk: bytes):
+        # 创建一个加密器
+        decrypt_util = self.cipher.decryptor()
+        data = decrypt_util.update(chunk)
+        data += decrypt_util.finalize()
+        return data
 
 
 if __name__ == '__main__':

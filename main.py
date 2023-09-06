@@ -1,3 +1,5 @@
+import os
+import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -7,7 +9,7 @@ from croniter import croniter
 
 import config
 from AligoUtil import AligoUtil
-from FileBackup import FileBackup, clear_cache
+from FilePack import FilePack, clear_cache
 
 logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(lineno)d - %(message)s"
                     , level=logging.DEBUG)
@@ -17,17 +19,16 @@ log = logging.getLogger(Path(__file__).stem)
 
 def do_backup():
     log.info("开始执行备份")
-    backup = FileBackup().start_backup()
-    aligo_util = AligoUtil()
-    aligo_util.upload_backup(backup)
-    clear_cache()
-
+    backup = FilePack().start_backup()
+    # aligo_util = AligoUtil()
+    # aligo_util.upload_backup(backup)
+    # clear_cache()
 
 def task():
     iter = croniter(config.cron_expression, datetime.now())
     next_execution_time = iter.get_next(datetime)
     while True:
-        log.info(f"下次执行倒计时{next_execution_time - datetime.now()}")
+        log.info(f"下次执行倒计时 {next_execution_time - datetime.now()}")
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = iter.get_next(datetime)
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
-    parser.add_argument('file-dir', help='存放备份文件的文件夹路径')
+    parser.add_argument('file-dir',nargs='?', help='存放备份文件的文件夹路径',)
 
     args = parser.parse_args()
 
@@ -64,7 +65,8 @@ if __name__ == '__main__':
         config.progress = args.progress
     if args.mode:
         if args.mode == "task":
-            task()
+            # task()
+            do_backup()
         else:
             log.info(args.mode)
             log.info(args.file)
