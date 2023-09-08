@@ -9,7 +9,7 @@ from croniter import croniter
 import config
 from AligoUtil import AligoUtil
 from FilePack import FilePack
-from logUtil import log
+from LogUtil import log
 
 
 def do_backup():

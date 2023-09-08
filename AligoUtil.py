@@ -3,7 +3,7 @@ from aligo import Aligo, EMailConfig, set_config_folder
 import config
 import email_config
 
-from logUtil import log
+from LogUtil import log
 
 
 class AligoUtil:

@@ -10,7 +10,7 @@ from BytesChain.GzipProcessor import GzipProcessor
 from BytesChain.PlainProcessor import PlainProcessor
 from ddv.DdvFileInfo import DdvFileInfo, FileType
 from ddv.DdvFileMeta import DdvFileMeta
-from logUtil import log
+from LogUtil import log
 
 MAGIC_NUM = "ddvudo".upper().encode("utf-8")
 magic_num_len = len(MAGIC_NUM)
