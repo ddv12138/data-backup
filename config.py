@@ -11,7 +11,7 @@ exclude_list = [
     ".gitignore",
     ".hidden-file"
 ]
-# 用韵存放备份缓存的文件夹
+# 用来存放备份缓存的文件夹
 cache_dir = "./cache/"
 # 加密的密钥
 password = "123456"
