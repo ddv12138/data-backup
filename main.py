@@ -27,7 +27,9 @@ def task():
     iterator = croniter(config.cron_expression, datetime.now())
     next_execution_time = iterator.get_next(datetime)
     while True:
-        log.info(f"下次执行倒计时 {next_execution_time - datetime.now()}")
+        now_ = next_execution_time - datetime.now()
+        if now_.seconds % 5 == 0:
+            log.debug(f"下次执行倒计时 {now_} 下次执行时间 {next_execution_time}")
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = iterator.get_next(datetime)

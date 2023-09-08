@@ -22,7 +22,7 @@ aligo_config_path = "aligo_config"
 # 任务执行周期的cron表达式
 cron_expression = "*/1 * * * * "
 # 最大同时保留多少份备份
-max_copy_count = 1
+max_copy_count = 10
 # 是否加密
 is_enc = True
 # 是否压缩
