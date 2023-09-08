@@ -1,3 +1,5 @@
+import logging
+
 include_list = [
     "example",
     "config.py"
@@ -15,4 +17,4 @@ cron_expression = "*/1 * * * * "
 max_copy_count = 1
 is_enc = True
 is_gzip = True
-
+log_level = logging.INFO
