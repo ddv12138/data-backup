@@ -332,6 +332,5 @@ class FilePack:
                 processor = GzipProcessor(processor)
             pack_file_list = self.package(file_list, output_dir, processor)
             log.info(f"打包后的文件:{pack_file_list}")
-            self.unpack(pack_file_list[0],config.cache_dir+"/unpack")
             return pack_file_list
         pass
