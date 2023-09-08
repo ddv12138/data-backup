@@ -10,14 +10,17 @@ class AligoUtil:
     def __init__(self) -> None:
         super().__init__()
         set_config_folder(config.aligo_config_path)
-        self.email_config = EMailConfig(
-            email=email_config.notify_email,
-            user=email_config.user,
-            password=email_config.password,
-            host=email_config.host,
-            port=email_config.port
-        )
-        self.aligo = Aligo(email=self.email_config,level=config.log_level)
+        if config.use_email:
+            self.email_config = EMailConfig(
+                email=email_config.notify_email,
+                user=email_config.user,
+                password=email_config.password,
+                host=email_config.host,
+                port=email_config.port
+            )
+            self.aligo = Aligo(email=self.email_config,level=config.log_level)
+        else:
+            self.aligo = Aligo(level=config.log_level)
 
     def upload_backup(self, file: str):
         cloud_path = self.aligo.get_folder_by_path(config.cloud_path)

@@ -57,17 +57,18 @@ def clear_cache():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='一个自动的周期性的把文件备份到阿里云的工具')
-    parser.add_argument('mode', default="task", choices=['task', 'backup', 'unpack', "info"],
+    parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
                         help='运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息')
-    parser.add_argument('--disable_enc', '-e', help='是否加密')
-    parser.add_argument('--disable_gzip', '-g', help='是否压缩')
+    parser.add_argument('--disable_enc', '-e', help='不需要加密')
+    parser.add_argument('--disable_gzip', '-g', help='不需要压缩')
     parser.add_argument('--cache_dir', help='缓存文件路径')
     parser.add_argument('--password', help='加密用的密钥，妥善保存，解密需要用到')
     parser.add_argument('--cloud_path', help='阿里云用于备份的文件路径')
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
-    parser.add_argument('--verbose', "-v", help='展示更详细的执行过程')
+    parser.add_argument('--verbose', "-v",action="count", help='展示更详细的执行过程')
+    parser.add_argument('--disable_email', action="count", help='展示更详细的执行过程')
     parser.add_argument('file', nargs='?', help='存放备份文件的文件夹路径或者备份文件之一', )
 
     args = parser.parse_args()
@@ -90,6 +91,8 @@ if __name__ == '__main__':
         config.is_gzip = False
     if args.verbose:
         config.log_level = logging.DEBUG
+    if args.disable_email:
+        config.use_email = False
     if args.mode:
         if args.mode == "task":
             task()
