@@ -17,7 +17,7 @@ class AligoUtil:
             host=email_config.host,
             port=email_config.port
         )
-        self.aligo = Aligo(email=self.email_config)
+        self.aligo = Aligo(email=self.email_config,level=config.log_level)
 
     def upload_backup(self, file: str):
         cloud_path = self.aligo.get_folder_by_path(config.cloud_path)
