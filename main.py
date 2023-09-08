@@ -57,7 +57,7 @@ def clear_cache():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='一个自动的周期性的把文件备份到阿里云的工具')
-    parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
+    parser.add_argument('mode', default="task", choices=['task', 'backup', 'unpack', "info"],
                         help='运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息')
     parser.add_argument('--disable_enc', '-e', help='是否加密')
     parser.add_argument('--disable_gzip', '-g', help='是否压缩')

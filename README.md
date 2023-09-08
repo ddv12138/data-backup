@@ -14,20 +14,20 @@ python main.py -h
 
 # 命令行配置说明
 ```shell
-usage: main.py [-h] [--mode {task,backup,unpack,info}] [--disable_enc DISABLE_ENC] [--disable_gzip DISABLE_GZIP] [--cache_dir CACHE_DIR]
-               [--password PASSWORD] [--cloud_path CLOUD_PATH] [--config_path CONFIG_PATH] [--cron_expression CRON_EXPRESSION]
-               [--max_copy_count MAX_COPY_COUNT] [-v VERBOSE]
-               [file]
+usage: main.py [-h] [--disable_enc DISABLE_ENC] [--disable_gzip DISABLE_GZIP] [--cache_dir CACHE_DIR] [--password PASSWORD]
+               [--cloud_path CLOUD_PATH] [--config_path CONFIG_PATH] [--cron_expression CRON_EXPRESSION] [--max_copy_count MAX_COPY_COUNT]
+               [--verbose VERBOSE]
+               {task,backup,unpack,info} [file]
 
 一个自动的周期性的把文件备份到阿里云的工具
 
 positional arguments:
+  {task,backup,unpack,info}
+                        运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息
   file                  存放备份文件的文件夹路径或者备份文件之一
 
 optional arguments:
   -h, --help            show this help message and exit
-  --mode {task,backup,unpack,info}, -m {task,backup,unpack,info}
-                        运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息
   --disable_enc DISABLE_ENC, -e DISABLE_ENC
                         是否加密
   --disable_gzip DISABLE_GZIP, -g DISABLE_GZIP
@@ -43,8 +43,9 @@ optional arguments:
                         定时任务表达式
   --max_copy_count MAX_COPY_COUNT
                         云端保存的最大备份数量
-  -v VERBOSE, --verbose VERBOSE
+  --verbose VERBOSE, -v VERBOSE
                         展示更详细的执行过程
+
 ```
 # 待完成事项
 
