@@ -13,3 +13,4 @@ class DdvFileInfo:
         self.size = size
         self.type = type
         self.packed_size = 0
+        self.sha224 = None

@@ -1,15 +1,9 @@
-import logging
-from pathlib import Path
-
 from aligo import Aligo, EMailConfig, set_config_folder
 
 import config
 import email_config
 
-logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(lineno)d - %(message)s"
-                    , level=logging.DEBUG)
-
-log = logging.getLogger(Path(__file__).stem)
+from logUtil import log
 
 
 class AligoUtil:

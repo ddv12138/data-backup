@@ -1,6 +1,5 @@
 import os.path
 import sys
-from pathlib import Path
 from decimal import Decimal, ROUND_HALF_EVEN
 
 from cryptography.hazmat.primitives import hashes
@@ -10,13 +9,8 @@ from tqdm import tqdm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 
-import logging
 
 import config
-
-logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(lineno)d - %(message)s"
-                    , level=logging.DEBUG)
-log = logging.getLogger(Path(__file__).stem)
 
 
 class EncUtil:
@@ -29,7 +23,8 @@ class EncUtil:
         self.cipher = Cipher(algorithms.ChaCha20(self.key.encode("utf-8"), self.nonce), mode=None,
                              backend=default_backend())
 
-    def generate_key(self, passwd: str) -> str:
+    @staticmethod
+    def generate_key(passwd: str) -> str:
         # 使用 PBKDF2HMAC 从种子生成密钥
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -109,7 +104,6 @@ class EncUtil:
         encrypt_util = self.cipher.encryptor()
         enc_data = encrypt_util.update(chunk)
         enc_data += encrypt_util.finalize()
-        log.debug(f"加密前大小{len(bytes)},加密后{len(enc_data)}")
         return enc_data
 
     def decrypt_bytes(self, chunk: bytes):
@@ -119,6 +113,3 @@ class EncUtil:
         data += decrypt_util.finalize()
         return data
 
-
-if __name__ == '__main__':
-    pass

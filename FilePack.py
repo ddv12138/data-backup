@@ -1,22 +1,20 @@
-import gzip
-import logging
+import hashlib
 import os
 import pickle
 import shutil
-from pathlib import Path
 
 import config
+from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
+from BytesChain.EncryptProcessor import EncryptProcessor
+from BytesChain.GzipProcessor import GzipProcessor
+from BytesChain.PlainProcessor import PlainProcessor
 from ddv.DdvFileInfo import DdvFileInfo, FileType
 from ddv.DdvFileMeta import DdvFileMeta
+from logUtil import log
 
-logging.basicConfig(format="%(asctime)s-%(name)s-%(levelname)s %(filename)s:%(lineno)d - %(message)s"
-                    , level=logging.DEBUG)
-
-log = logging.getLogger(Path(__file__).stem)
-
-magic_num = "ddvudo".encode("utf-8")
-magic_num_len = len(magic_num)
-magic_num_end = 4294967295
+MAGIC_NUM = "ddvudo".upper().encode("utf-8")
+magic_num_len = len(MAGIC_NUM)
+MAGIC_NUM_END = 4294967295
 
 
 class FilePack:
@@ -35,15 +33,12 @@ class FilePack:
         try:
             for s_file in include_list:
                 log.info("开始处理文件:" + s_file)
-                if os.path.exists(s_file):
-                    log.debug(s_file + " 文件存在")
-                else:
+                if not os.path.exists(s_file):
                     log.error("文件不存在，跳过" + s_file, exc_info=True, stack_info=True)
                     err_list.append(s_file)
                     continue
                 isdir = os.path.isdir(s_file)
                 if isdir:
-                    log.debug("[" + s_file + "]为目录，开始扫描目录下文件")
                     for root, dirs, files in os.walk(s_file, True, None, False):
                         if len(os.listdir(root)) == 0:
                             log.info(root)
@@ -54,7 +49,7 @@ class FilePack:
 
                             # 如果是排除的文件则跳过
                             for ex in exclude_list:
-                                if path.startswith(ex) or ex == sub_file:
+                                if path.startswith(ex) or ex == sub_file or os.path.islink(path):
                                     excluded = True
                                     ignore_list.append(sub_file)
                                     break
@@ -68,9 +63,11 @@ class FilePack:
         return [file_list, ignore_list, err_list]
 
     @staticmethod
-    def package(files: list, output_dir: str, use_split: bool = False,
+    def package(files: list, output_dir: str,
+                bytes_processor: BytesAbstractProcessor = PlainProcessor(None),
+                use_split: bool = True,
                 split_size: int = 1024 * 1024 * 1024,
-                buffer_size=1024 * 1024 * 10) -> list:
+                buffer_size=1024 * 1024 * 100) -> list:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         current_split = 1
@@ -86,11 +83,12 @@ class FilePack:
         with open(current_tar_name, "wb") as ddv:
             res.append(current_tar_name)
             # 写入魔数
-            ddv.write(magic_num)
+            ddv.write(MAGIC_NUM)
             # 写入当前分卷序号
             ddv.write(current_split.to_bytes(4, "big"))
             for f in files:
-                file_seq = files.index(f).to_bytes(4, "big")
+                file_index = files.index(f)
+                file_seq = file_index.to_bytes(4, "big")
                 # 写入当前文件序号
                 ddv.write(file_seq)
                 curr_file_size = 0
@@ -99,6 +97,7 @@ class FilePack:
                     continue
                 # 处理文件
                 with open(f.name, "rb") as file:
+                    sha224 = hashlib.sha224()
                     while True:
                         curr_buff_size = buffer_size
                         if use_split:
@@ -107,10 +106,15 @@ class FilePack:
                         read = file.read(curr_buff_size)
                         if not read:
                             f.packed_size = curr_file_size
+                            f.sha224 = sha224.hexdigest()
                             log.info(
                                 f"文件大小记录 文件名：{f.name} 文件类型：{f.type} 文件大小：{f.size} 打包后大小：{f.packed_size}")
                             break
-                        curr_file_size += len(read)
+                        sha224.update(read)
+                        read = bytes_processor.pack(read)
+                        part_size = len(read)
+                        curr_file_size += part_size
+                        ddv.write(part_size.to_bytes(4, "big"))
                         ddv.write(read)
                         if ddv.tell() >= split_size and use_split:
                             current_split += 1
@@ -119,24 +123,30 @@ class FilePack:
                             ddv.close()
                             ddv = open(current_tar_name, "wb")
                             # 写入魔数
-                            ddv.write(magic_num)
+                            ddv.write(MAGIC_NUM)
                             # 写入当前分卷序号
                             ddv.write(current_split.to_bytes(4, "big"))
             # 写入文件列表整体信息
-            file_meta = DdvFileMeta(files)
+            file_meta = DdvFileMeta(files, bytes_processor)
+            for f in files:
+                file_meta.original_total_size += f.size
+                file_meta.packaged_total_size += f.packed_size
+            log.info(f"源文件总计大小：{file_meta.original_total_size},"
+                     f"处理后总计大小：{file_meta.packaged_total_size},"
+                     f"比例：{file_meta.packaged_total_size / file_meta.original_total_size}")
             files_info_dumps = pickle.dumps(file_meta)
             file_meta_len = len(files_info_dumps)
             file_meta_len_to_bytes = file_meta_len.to_bytes(4, "big")
-            ddv.write(magic_num_end.to_bytes(4, "big"))
+            ddv.write(MAGIC_NUM_END.to_bytes(4, "big"))
             ddv.write(files_info_dumps)
             ddv.write(file_meta_len_to_bytes)
-            ddv.write(magic_num_end.to_bytes(4, "big"))
+            ddv.write(MAGIC_NUM_END.to_bytes(4, "big"))
         return res
 
-    def unpack(self, input_file: str, output_dir, buffer_size=1024 * 1024 * 5):
+    def unpack(self, input_file: str, output_dir):
         with open(input_file, "rb+") as ddv:
             curr_magic_num = ddv.read(magic_num_len)
-            if curr_magic_num != magic_num:
+            if curr_magic_num != MAGIC_NUM:
                 raise Exception(f"文件格式不匹配{curr_magic_num}")
             all_split = self.find_splits(input_file)
             log.info(f"分卷信息: {all_split}")
@@ -144,14 +154,13 @@ class FilePack:
         curr_file_size = 0
         curr_output_file = None
         curr_file_readied_size = 0
-
         final_split = all_split[max(sorted(all_split))]
         with open(final_split, "ab+") as final_split_ab:
             final_split_size = os.path.getsize(final_split)
             # 校验文件结束魔数
             final_split_ab.seek(final_split_size - 4)
             curr_magic_end = int.from_bytes(final_split_ab.read(4), "big")
-            if magic_num_end != curr_magic_end:
+            if MAGIC_NUM_END != curr_magic_end:
                 raise Exception(f"文件格式不匹配")
             # 读取文件列表大小
             final_split_ab.seek(final_split_size - 8)
@@ -161,23 +170,26 @@ class FilePack:
             file_list = pickle.loads(final_split_ab.read(file_list_size))
             if type(file_list) != DdvFileMeta:
                 raise Exception("文件信息已损坏")
+            # 读取压缩时使用的分块处理器
+            bytes_processor = file_list.bytes_processor
         try:
             for _ in sorted(all_split):
                 curr_file = all_split[_]
                 with open(curr_file, "rb") as ddv:
                     # 校验魔数
                     curr_magic_num = ddv.read(magic_num_len)
-                    if curr_magic_num != magic_num:
+                    if curr_magic_num != MAGIC_NUM:
                         raise Exception(f"文件格式不匹配{curr_magic_num}")
-                    # 读取分选序号
+                    # 读取分卷序号
                     split_seq = int.from_bytes(ddv.read(4), "big")
 
                     while True:
                         if curr_file_readied_size == curr_file_size:
+                            sha224 = hashlib.sha224()
                             curr_file_readied_size = 0
                             # 读取文件序号
                             f_seq = int.from_bytes(ddv.read(4), "big")
-                            if f_seq == magic_num_end:
+                            if f_seq == MAGIC_NUM_END:
                                 log.info("处理完毕，退出")
                                 break
                             curr_file_info = file_list.files[f_seq]
@@ -200,6 +212,16 @@ class FilePack:
 
                         split_break = False
                         while True:
+                            # 上一轮循环后，当前文件刚好处理完毕
+                            if curr_file_readied_size == curr_file_size:
+                                self.handle_file_read_end(curr_file_info, curr_output_file, sha224)
+                                break
+                            # 读取下一个分块大小
+                            buffer_size = int.from_bytes(ddv.read(4), "big")
+                            if buffer_size == MAGIC_NUM_END:
+                                self.handle_file_read_end(curr_file_info, curr_output_file, sha224)
+                                split_break = True
+                                break
                             if curr_file_readied_size + buffer_size > curr_file_size:
                                 curr_buffer_size = curr_file_size - curr_file_readied_size
                             else:
@@ -207,13 +229,14 @@ class FilePack:
                             read = ddv.read(curr_buffer_size)
                             if not read:
                                 if curr_file_readied_size == curr_file_size:
-                                    curr_output_file.flush()
-                                    curr_output_file.close()
+                                    self.handle_file_read_end(curr_file_info, curr_output_file, sha224)
                                 else:
                                     split_break = True
                                 break
                             else:
                                 curr_file_readied_size += len(read)
+                                read = bytes_processor.unpack(read)
+                                sha224.update(read)
                                 curr_output_file.write(read)
                         if split_break:
                             break
@@ -223,45 +246,54 @@ class FilePack:
                 curr_output_file.close()
 
     @staticmethod
+    def handle_file_read_end(curr_file_info, curr_output_file, sha224):
+        curr_output_file.flush()
+        curr_output_file.close()
+        curr_sha224 = sha224.hexdigest()
+        log.info(f"校验sha224 当前值：{curr_sha224}，记录值：{curr_file_info.sha224}")
+        if curr_sha224 != curr_file_info.sha224:
+            log.error(f"{curr_file_info.name} 校验失败")
+
+    @staticmethod
     def find_splits(input_file):
         file_map = {}
-        dir, _ = os.path.split(input_file)
-        for f in os.listdir(dir):
-            f_path = os.path.normpath(dir + "/" + f)
+        _dir, _ = os.path.split(input_file)
+        for f in os.listdir(_dir):
+            f_path = os.path.normpath(_dir + "/" + f)
             with open(f_path, "rb") as f_rb:
                 f_magic_num = f_rb.read(magic_num_len)
-                if f_magic_num == magic_num:
+                if f_magic_num == MAGIC_NUM:
                     f_seq = int.from_bytes(f_rb.read(4), "big")
                     file_map[f_seq] = f_path
                 else:
                     continue
         return file_map
 
-
-def clear_cache():
-    directory_path = config.cache_dir
-    try:
-        # 确保目录存在
-        if os.path.exists(directory_path):
-            # 遍历目录中的文件和子目录
-            for root, dirs, files in os.walk(directory_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    # 删除文件
-                    os.remove(file_path)
-                for dir in dirs:
-                    dir_path = os.path.join(root, dir)
-                    # 删除子目录
-                    shutil.rmtree(dir_path)
-    except Exception as e:
-        print(f"清空目录出错：{str(e)}")
+    def start_backup(self, is_enc: bool, is_gzip: bool, output_dir: str) -> list:
+        file_list, ignore_list, err_list = self.fetch_file()
+        log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
+        if len(ignore_list) > 0:
+            log.info(f"忽略的文件：{ignore_list}")
+        if len(err_list) > 0:
+            log.info(f"出错的文件：{err_list}")
+        if len(file_list) > 0:
+            log.info(f"找到的文件：{file_list}")
+            processor = PlainProcessor(None)
+            if is_enc:
+                processor = EncryptProcessor(processor)
+            if is_gzip:
+                processor = GzipProcessor(processor)
+            pack_file_list = self.package(file_list, output_dir, processor)
+            log.info(f"打包后的文件:{pack_file_list}")
+            return pack_file_list
+        pass
 
 
 if __name__ == '__main__':
-    # clear_cache()
-    # backup = FilePack()
-    # backup.package(backup.fetch_file()[0], config.cache_dir, use_split=True)
-    # backup.unpack("cache/package.1.ddv", config.cache_dir + "unpack/")
-    encode = "dddd".encode("utf-8")
-    print(len(encode))
-    print(len(gzip.compress(encode)))
+    backup = FilePack()
+    backup.package(files=sorted(backup.fetch_file()[0], reverse=True),
+                   output_dir=config.cache_dir,
+                   use_split=True,
+                   bytes_processor=GzipProcessor(EncryptProcessor(None)),
+                   split_size=1024 * 1024 * 10)
+    backup.unpack("cache/package.1.ddv", config.cache_dir + "unpack/")
