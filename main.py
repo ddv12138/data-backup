@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
-    parser.add_argument('-v', "--verbose", help='展示更详细的执行过程')
+    parser.add_argument('--verbose', "-v", help='展示更详细的执行过程')
     parser.add_argument('file', nargs='?', help='存放备份文件的文件夹路径或者备份文件之一', )
 
     args = parser.parse_args()
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         config.is_enc = False
     if args.disable_gzip:
         config.is_gzip = False
-    if args.v:
+    if args.verbose:
         config.log_level = logging.DEBUG
     if args.mode:
         if args.mode == "task":
