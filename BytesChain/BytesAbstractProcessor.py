@@ -27,3 +27,13 @@ class BytesAbstractProcessor(ABC):
             return self.__unpack_process__(self.next_processor.unpack(bytes_data))
         else:
             return self.__unpack_process__(bytes_data)
+
+    def __str__(self) -> str:
+        proc = self
+        rep_str = ""
+        while proc:
+            rep_str += proc.__class__.__name__
+            if proc.next_processor:
+                rep_str += "--->"
+            proc = proc.next_processor
+        return rep_str

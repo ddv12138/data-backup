@@ -247,8 +247,11 @@ class FilePack:
 
     @staticmethod
     def handle_file_read_end(curr_file_info, curr_output_file, sha224):
-        curr_output_file.flush()
-        curr_output_file.close()
+        if not curr_output_file.closed:
+            curr_output_file.flush()
+            curr_output_file.close()
+        if curr_file_info.type == FileType.DIR:
+            return
         curr_sha224 = sha224.hexdigest()
         log.info(f"校验sha224 当前值：{curr_sha224}，记录值：{curr_file_info.sha224}")
         if curr_sha224 != curr_file_info.sha224:
@@ -268,6 +271,50 @@ class FilePack:
                 else:
                     continue
         return file_map
+
+    def info(self,input_file):
+        file_map = {}
+        _dir, _ = os.path.split(input_file)
+        for f in os.listdir(_dir):
+            f_path = os.path.normpath(_dir + "/" + f)
+            with open(f_path, "rb") as f_rb:
+                f_magic_num = f_rb.read(magic_num_len)
+                if f_magic_num == MAGIC_NUM:
+                    f_seq = int.from_bytes(f_rb.read(4), "big")
+                    file_map[f_seq] = f_path
+                else:
+                    continue
+        with open(input_file, "rb+") as ddv:
+            curr_magic_num = ddv.read(magic_num_len)
+            if curr_magic_num != MAGIC_NUM:
+                raise Exception(f"文件格式不匹配{curr_magic_num}")
+            all_split = self.find_splits(input_file)
+            log.info(f"分卷信息: {all_split}")
+        final_split = all_split[max(sorted(all_split))]
+        with open(final_split, "ab+") as final_split_ab:
+            final_split_size = os.path.getsize(final_split)
+            # 校验文件结束魔数
+            final_split_ab.seek(final_split_size - 4)
+            curr_magic_end = int.from_bytes(final_split_ab.read(4), "big")
+            if MAGIC_NUM_END != curr_magic_end:
+                raise Exception(f"文件格式不匹配")
+            # 读取文件列表大小
+            final_split_ab.seek(final_split_size - 8)
+            file_list_size = int.from_bytes(final_split_ab.read(4), "big")
+            # 读取文件列表
+            final_split_ab.seek(final_split_size - 8 - file_list_size)
+            file_list = pickle.loads(final_split_ab.read(file_list_size))
+            if type(file_list) != DdvFileMeta:
+                raise Exception("文件信息已损坏")
+            # 读取压缩时使用的分块处理器
+            bytes_processor = file_list.bytes_processor
+            log.debug(f"加工序列：{bytes_processor}")
+            log.info(f"文件信息：")
+            for f in file_list.files:
+                log.info(f"文件名：{f.name}，文件类型：{f.type}，源文件大小：{f.size}，打包后大小：{f.packed_size}")
+            log.info(f"文件总计原始大小：{file_list.original_total_size}")
+            log.info(f"文件总计打包后大小：{file_list.packaged_total_size}")
+            log.info(f"打包比例：{file_list.packaged_total_size/file_list.original_total_size}")
 
     def start_backup(self, is_enc: bool, is_gzip: bool, output_dir: str) -> list:
         file_list, ignore_list, err_list = self.fetch_file()

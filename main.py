@@ -55,7 +55,7 @@ def clear_cache():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='一个自动的周期性的把文件备份到阿里云的工具')
     parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
-                        help='运行模式，task 为执行定时备份，decrypt 为解密')
+                        help='运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息')
     parser.add_argument('--disable_enc', '-e', help='是否加密')
     parser.add_argument('--disable_gzip', '-g', help='是否压缩')
     parser.add_argument('--cache_dir', help='缓存文件路径')
@@ -93,6 +93,8 @@ if __name__ == '__main__':
             output_dir = os.path.join(config.cache_dir, "unpack")
             file_pack = FilePack()
             file_pack.unpack(input_file=args.file, output_dir=output_dir)
+        elif args.mode == "info" and args.file:
+            file_pack = FilePack()
+            file_pack.info(input_file=args.file)
         else:
-            log.info(args.mode)
-            log.info(args.file)
+            raise Exception("无法识别")
