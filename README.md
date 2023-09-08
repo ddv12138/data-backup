@@ -50,3 +50,4 @@ optional arguments:
 
 1. docker支持
 2. 受排除文件的通配符匹配
+3. 支持从文件读取密码
