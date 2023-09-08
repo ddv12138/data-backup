@@ -1,14 +1,13 @@
 import hashlib
 import os
 import pickle
-import shutil
 
 import config
 from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
 from BytesChain.EncryptProcessor import EncryptProcessor
 from BytesChain.GzipProcessor import GzipProcessor
 from BytesChain.PlainProcessor import PlainProcessor
-from BytesChain.ZlibProcessor import ZlibProcessor
+from BytesChain.ZstdProcessor import ZstdProcessor
 from ddv.DdvFileInfo import DdvFileInfo, FileType
 from ddv.DdvFileMeta import DdvFileMeta
 from LogUtil import log
@@ -317,7 +316,7 @@ class FilePack:
             log.info(f"文件总计打包后大小：{file_list.packaged_total_size}")
             log.info(f"打包比例：{file_list.packaged_total_size/file_list.original_total_size}")
 
-    def start_backup(self, is_enc: bool, is_gzip: bool,use_zlib:bool, output_dir: str) -> list:
+    def start_backup(self, is_enc: bool, is_gzip: bool,is_z:bool, output_dir: str) -> list:
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
         if len(ignore_list) > 0:
@@ -329,8 +328,8 @@ class FilePack:
             processor = None
             if is_enc:
                 processor = EncryptProcessor(processor)
-            if use_zlib:
-                processor = ZlibProcessor(processor)
+            if is_z:
+                processor = ZstdProcessor(processor)
             else:
                 if is_gzip:
                     processor = GzipProcessor(processor)

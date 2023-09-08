@@ -17,7 +17,7 @@ def do_backup():
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d_%H.%M.%S"))
     file_pack = FilePack()
-    file_pack.start_backup(is_enc=config.is_enc, is_gzip=config.is_gzip,use_zlib=config.use_zlib, output_dir=output_dir)
+    file_pack.start_backup(is_enc=config.is_enc, is_gzip=config.is_gzip,is_z=config.is_z, output_dir=output_dir)
     log.info(output_dir)
     aligo_util = AligoUtil()
     aligo_util.upload_backup(output_dir)
@@ -59,9 +59,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='一个自动的周期性的把文件备份到阿里云的工具')
     parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
                         help='运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息')
-    parser.add_argument('--disable_enc', '-e', action='count', help='不需要加密')
-    parser.add_argument('--disable_gzip', '-g', action='count', help='不需要压缩')
-    parser.add_argument('--use_zlib', '-z', action='count', help='使用zlib压缩')
+    parser.add_argument('--disable_enc', action='count', help='不需要加密')
+    parser.add_argument('--disable_gzip', action='count', help='不需要压缩')
+    parser.add_argument('--use_zstd', '-z', action='count', help='使用zlib压缩')
     parser.add_argument('--cache_dir', help='缓存文件路径')
     parser.add_argument('--password', help='加密用的密钥，妥善保存，解密需要用到')
     parser.add_argument('--cloud_path', help='阿里云用于备份的文件路径')
@@ -90,9 +90,9 @@ if __name__ == '__main__':
         config.is_enc = False
     if args.disable_gzip:
         config.is_gzip = False
-    if args.use_zlib:
+    if args.use_zstd:
         config.is_gzip = False
-        config.use_zlib = True
+        config.is_z = True
     if args.verbose:
         config.log_level = logging.DEBUG
     if args.disable_email:
