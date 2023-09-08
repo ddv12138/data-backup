@@ -30,3 +30,4 @@ is_gzip = True
 # 日志级别
 log_level = logging.INFO
 use_email = True
+use_zlib = False
