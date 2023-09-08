@@ -14,7 +14,7 @@ from logUtil import log
 def do_backup():
     clear_cache()
     log.info("开始执行备份")
-    output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d %H.%M.%S"))
+    output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d_%H.%M.%S"))
     file_pack = FilePack()
     file_pack.start_backup(is_enc=config.is_enc, is_gzip=config.is_gzip, output_dir=output_dir)
     log.info(output_dir)
@@ -54,7 +54,7 @@ def clear_cache():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='一个自动的周期性的把文件备份到阿里云的工具')
-    parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'decrypt', "info"],
+    parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
                         help='运行模式，task 为执行定时备份，decrypt 为解密')
     parser.add_argument('--disable_enc', '-e', help='是否加密')
     parser.add_argument('--disable_gzip', '-g', help='是否压缩')
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
-    parser.add_argument('file-dir', nargs='?', help='存放备份文件的文件夹路径', )
+    parser.add_argument('file', nargs='?', help='存放备份文件的文件夹路径或者备份文件之一', )
 
     args = parser.parse_args()
 
@@ -89,6 +89,10 @@ if __name__ == '__main__':
             task()
         elif args.mode == "backup":
             do_backup()
+        elif args.mode == "unpack" and args.file:
+            output_dir = os.path.join(config.cache_dir, "unpack")
+            file_pack = FilePack()
+            file_pack.unpack(input_file=args.file, output_dir=output_dir)
         else:
             log.info(args.mode)
             log.info(args.file)

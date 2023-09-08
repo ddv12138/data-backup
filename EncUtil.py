@@ -1,14 +1,10 @@
 import os.path
-import sys
-from decimal import Decimal, ROUND_HALF_EVEN
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from tqdm import tqdm
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
-
 
 import config
 
@@ -19,7 +15,7 @@ class EncUtil:
         super().__init__()
         self.buffer_size = buffer_size
         self.key = self.generate_key(passwd)
-        self.nonce = os.urandom(16)
+        self.nonce = self.generate_nonce(passwd).encode("utf-8")
         self.cipher = Cipher(algorithms.ChaCha20(self.key.encode("utf-8"), self.nonce), mode=None,
                              backend=default_backend())
 
@@ -34,6 +30,18 @@ class EncUtil:
         )
         return kdf.derive(passwd.encode("utf-8")).hex()
 
+    @staticmethod
+    def generate_nonce(passwd: str) -> str:
+        # 使用 PBKDF2HMAC 从种子生成密钥
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            iterations=100000,  # 可以自行调整迭代次数
+            salt=b"salt",
+            length=8  # 生成 256 位的密钥
+        )
+        return kdf.derive(passwd.encode("utf-8")).hex()
+
+
     def encrypt_file(self, file: str, output: str):
 
         if os.path.islink(file):
@@ -43,9 +51,6 @@ class EncUtil:
             file = realpath
         # 创建一个加密器
         encrypt_util = self.cipher.encryptor()
-        progress_bar = None
-        if config.enable_progress:
-            progress_bar = tqdm(total=100, desc="" + file + " --> Processing encrypt", file=sys.stderr)
         with open(file, "rb") as old, open(output, "wb") as new:
             new.write(self.nonce)
             count = 0
@@ -59,20 +64,10 @@ class EncUtil:
                 new.write(enc_len.to_bytes(4, "big"))
                 new.write(encrypted)
 
-                if progress_bar:
-                    progress = Decimal(count / os.path.getsize(file)) * 100
-                    progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
-                    progress_bar.n = int(progress)
-
             new.write(encrypt_util.finalize())
-        if progress_bar:
-            progress_bar.close()
         # log.debug("初始大小：%d，加密后大小：%d，", os.path.getsize(file), os.path.getsize(output))
 
     def decrypt_file(self, file: str, output: str):
-        progress_bar = None
-        if config.enable_progress:
-            progress_bar = tqdm(total=100, desc="" + file + " --> Processing decrypt", file=sys.stderr)
         with open(file, "rb") as old, open(output, "wb") as new:
             # 创建一个解密器
             self.nonce = old.read(16)
@@ -91,11 +86,6 @@ class EncUtil:
                 dec = decrypt_util.update(old_trunk)
                 new.write(dec)
 
-                if progress_bar:
-                    progress = Decimal(count / os.path.getsize(file)) * 100
-                    progress = progress.quantize(Decimal('0'), rounding=ROUND_HALF_EVEN)
-                    progress_bar.n = int(progress)
-                    progress_bar.refresh()
             new.write(decrypt_util.finalize())
         pass
 
@@ -112,4 +102,3 @@ class EncUtil:
         data = decrypt_util.update(chunk)
         data += decrypt_util.finalize()
         return data
-

@@ -278,22 +278,13 @@ class FilePack:
             log.info(f"出错的文件：{err_list}")
         if len(file_list) > 0:
             log.info(f"找到的文件：{file_list}")
-            processor = PlainProcessor(None)
+            processor = None
             if is_enc:
                 processor = EncryptProcessor(processor)
             if is_gzip:
                 processor = GzipProcessor(processor)
             pack_file_list = self.package(file_list, output_dir, processor)
             log.info(f"打包后的文件:{pack_file_list}")
+            self.unpack(pack_file_list[0],config.cache_dir+"/unpack")
             return pack_file_list
         pass
-
-
-if __name__ == '__main__':
-    backup = FilePack()
-    backup.package(files=sorted(backup.fetch_file()[0], reverse=True),
-                   output_dir=config.cache_dir,
-                   use_split=True,
-                   bytes_processor=GzipProcessor(EncryptProcessor(None)),
-                   split_size=1024 * 1024 * 10)
-    backup.unpack("cache/package.1.ddv", config.cache_dir + "unpack/")
