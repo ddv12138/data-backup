@@ -7,7 +7,6 @@ WORKDIR /app
 # Copy actions folder to working directory
 COPY ./BytesChain/ ./ddv/ ./AligoUtil.py ./config.py ./EncUtil.py ./FilePack.py ./LogUtil.py ./main.py ./requirements.txt /app/
 # Change back to root user to install dependencies
-VOLUME ["/app/config.py"]
 USER root
 
 # Install extra requirements for actions code, if necessary (uncomment next line)
