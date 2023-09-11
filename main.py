@@ -70,8 +70,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
     parser.add_argument('--progress', action='count', help='进度条开关')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
-    parser.add_argument('--input', '-i', help='存放备份文件的文件夹路径或者备份文件之一', )
-    parser.add_argument('--output', '-o', help='存放备份文件的文件夹路径或者备份文件之一', )
+    parser.add_argument('--input', '-i', help='配合info或者unpack模式，传入已有的打包文件路径，或是任意分包路径', )
+    parser.add_argument('--output', '-o', help='配合unpack模式,传入解包后文件的存放路径' )
 
     args = parser.parse_args()
 
@@ -105,16 +105,16 @@ if __name__ == '__main__':
             do_backup()
         elif args.mode == "unpack":
             if not args.input:
-                print("请给出需要解包的文件路径，具体参见帮助信息")
+                log.info("请给出需要解包的文件路径，具体参见帮助信息")
                 exit(-1)
             if not args.output:
-                print("请给出解包的文件的存放路径，具体参见帮助信息")
+                log.info("请给出解包的文件的存放路径，具体参见帮助信息")
                 exit(-1)
             file_pack = FilePack()
             file_pack.unpack(input_file=args.input, output_dir=args.output)
         elif args.mode == "info":
             if not args.input:
-                print("请给出需要解包的文件路径，具体参见帮助信息")
+                log.info("请给出需要解包的文件路径，具体参见帮助信息")
             file_pack = FilePack()
             file_pack.info(input_file=args.input)
         else:
