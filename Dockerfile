@@ -18,6 +18,7 @@ COPY ./requirements.txt /app/requirements.txt
 USER root
 
 # Install extra requirements for actions code, if necessary (uncomment next line)
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
 
