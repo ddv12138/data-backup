@@ -33,6 +33,7 @@ def task():
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = iterator.get_next(datetime)
+            log.debug(f"备份执行完成,等待下次激活,下次执行时间 {next_execution_time}")
         time.sleep(1)
 
 
@@ -95,6 +96,7 @@ if __name__ == '__main__':
     if args.disable_zip:
         config.is_zip = False
     if args.verbose:
+        log.setLevel(logging.DEBUG)
         config.log_level = logging.DEBUG
     if args.progress:
         config.progress = True
