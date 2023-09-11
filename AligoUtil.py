@@ -1,16 +1,15 @@
 from aligo import Aligo, EMailConfig, set_config_folder
-
-import config
-import email_config
-
 from LogUtil import log
+import config
+
 
 
 class AligoUtil:
     def __init__(self) -> None:
         super().__init__()
         set_config_folder(config.aligo_config_path)
-        if config.use_email:
+        try:
+            import email_config
             self.email_config = EMailConfig(
                 email=email_config.notify_email,
                 user=email_config.user,
@@ -18,8 +17,9 @@ class AligoUtil:
                 host=email_config.host,
                 port=email_config.port
             )
-            self.aligo = Aligo(email=self.email_config,level=config.log_level)
-        else:
+            self.aligo = Aligo(email=self.email_config, level=config.log_level)
+        except ImportError:
+            log.error("未找到邮箱配置，将使用命令行二维码验证")
             self.aligo = Aligo(level=config.log_level)
 
     def upload_backup(self, file: str):

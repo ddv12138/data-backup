@@ -88,6 +88,8 @@ class FilePack:
             # 写入当前分卷序号
             ddv.write(current_split.to_bytes(4, "big"))
             for f in files:
+                if config.progress:
+                    bar = tqdm(total=f.size, colour="green", unit='byte')
                 file_index = files.index(f)
                 file_seq = file_index.to_bytes(4, "big")
                 # 写入当前文件序号
@@ -112,6 +114,8 @@ class FilePack:
                                 f"文件大小记录 文件名：{f.name} 文件类型：{f.type} 文件大小：{f.size} 打包后大小：{f.packed_size}")
                             break
                         sha224.update(read)
+                        if config.progress:
+                            bar.update(len(read))
                         read = bytes_processor.pack(read)
                         part_size = len(read)
                         curr_file_size += part_size
@@ -169,7 +173,7 @@ class FilePack:
             # 读取文件列表
             final_split_ab.seek(final_split_size - 8 - file_list_size)
             file_list = pickle.loads(final_split_ab.read(file_list_size))
-            bar = tqdm(total=file_list.packaged_total_size, colour="green", unit='MB')
+            bar = tqdm(total=file_list.packaged_total_size, colour="green", unit='byte')
             if type(file_list) != DdvFileMeta:
                 raise Exception("文件信息已损坏")
             # 读取压缩时使用的分块处理器

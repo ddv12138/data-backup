@@ -68,8 +68,8 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
+    parser.add_argument('--progress', action='count', help='进度条开关')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
-    parser.add_argument('--disable_email', action="count", help='展示更详细的执行过程')
     parser.add_argument('--input', '-i', help='存放备份文件的文件夹路径或者备份文件之一', )
     parser.add_argument('--output', '-o', help='存放备份文件的文件夹路径或者备份文件之一', )
 
@@ -96,8 +96,8 @@ if __name__ == '__main__':
         config.is_zip = False
     if args.verbose:
         config.log_level = logging.DEBUG
-    if args.disable_email:
-        config.use_email = False
+    if args.progress:
+        config.progress = True
     if args.mode:
         if args.mode == "task":
             task()
