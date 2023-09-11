@@ -18,7 +18,9 @@ RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && mkdir /.aligo \
     && chown -R 1001:1001 /.aligo \
     && chown -R 1001:1001 /app \
-    && chmod -R 755 /app
+    && chmod -R 755 /app \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo 'Asia/Shanghai' >/etc/timezone
 # By best practices, don't run the code with root user
 USER 1001
 
