@@ -17,7 +17,7 @@ def do_backup():
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d_%H.%M.%S"))
     file_pack = FilePack()
-    file_pack.start_backup(is_enc=config.is_enc, is_gzip=config.is_gzip,is_z=config.is_z, output_dir=output_dir)
+    file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
     log.info(output_dir)
     aligo_util = AligoUtil()
     aligo_util.upload_backup(output_dir)
@@ -60,17 +60,18 @@ if __name__ == '__main__':
     parser.add_argument('--mode', '-m', default="task", choices=['task', 'backup', 'unpack', "info"],
                         help='运行模式，task 为执行定时备份，decrypt 为解密，backup为即可执行一次备份，info用于查看已有的包信息')
     parser.add_argument('--disable_enc', action='count', help='不需要加密')
-    parser.add_argument('--disable_gzip', action='count', help='不需要压缩')
-    parser.add_argument('--use_zstd', '-z', action='count', help='使用zlib压缩')
+    parser.add_argument('--disable_zip', action='count', help='不需要压缩')
     parser.add_argument('--cache_dir', help='缓存文件路径')
     parser.add_argument('--password', help='加密用的密钥，妥善保存，解密需要用到')
+    parser.add_argument('--passwd_file', help='(文件中读取)加密用的密钥，妥善保存，解密需要用到')
     parser.add_argument('--cloud_path', help='阿里云用于备份的文件路径')
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
     parser.add_argument('--disable_email', action="count", help='展示更详细的执行过程')
-    parser.add_argument('file', nargs='?', help='存放备份文件的文件夹路径或者备份文件之一', )
+    parser.add_argument('--input', '-i', help='存放备份文件的文件夹路径或者备份文件之一', )
+    parser.add_argument('--output', '-o', help='存放备份文件的文件夹路径或者备份文件之一', )
 
     args = parser.parse_args()
 
@@ -84,15 +85,15 @@ if __name__ == '__main__':
         config.cloud_path = args.cloud_path
     if args.password:
         config.password = args.password
+    if args.passwd_file:
+        with open(args.passwd_file, "r") as passwd_reader:
+            config.password = passwd_reader.readline()
     if args.cache_dir:
         config.cache_dir = args.cache_dir
     if args.disable_enc:
         config.is_enc = False
-    if args.disable_gzip:
-        config.is_gzip = False
-    if args.use_zstd:
-        config.is_gzip = False
-        config.is_z = True
+    if args.disable_zip:
+        config.is_zip = False
     if args.verbose:
         config.log_level = logging.DEBUG
     if args.disable_email:
@@ -102,12 +103,19 @@ if __name__ == '__main__':
             task()
         elif args.mode == "backup":
             do_backup()
-        elif args.mode == "unpack" and args.file:
-            output_dir = os.path.join(config.cache_dir, "unpack")
+        elif args.mode == "unpack":
+            if not args.input:
+                print("请给出需要解包的文件路径，具体参见帮助信息")
+                exit(-1)
+            if not args.output:
+                print("请给出解包的文件的存放路径，具体参见帮助信息")
+                exit(-1)
             file_pack = FilePack()
-            file_pack.unpack(input_file=args.file, output_dir=output_dir)
-        elif args.mode == "info" and args.file:
+            file_pack.unpack(input_file=args.input, output_dir=args.output)
+        elif args.mode == "info":
+            if not args.input:
+                print("请给出需要解包的文件路径，具体参见帮助信息")
             file_pack = FilePack()
-            file_pack.info(input_file=args.file)
+            file_pack.info(input_file=args.input)
         else:
-            raise Exception("无法识别")
+            raise Exception("参数错误，请检查后重试")

@@ -16,7 +16,3 @@ python main.py -h
 
 1. docker支持
 2. 受排除文件的通配符匹配
-3. 支持从文件读取密码
-4. 加密过程中nonce，salt，key的处理
-5. zstd支持
-6. 支持指定解包路径

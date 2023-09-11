@@ -26,8 +26,7 @@ max_copy_count = 10
 # 是否加密
 is_enc = True
 # 是否压缩
-is_gzip = True
+is_zip = True
 # 日志级别
 log_level = logging.INFO
 use_email = True
-is_z = False

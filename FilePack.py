@@ -2,10 +2,11 @@ import hashlib
 import os
 import pickle
 
+from tqdm import tqdm
+
 import config
 from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
 from BytesChain.EncryptProcessor import EncryptProcessor
-from BytesChain.GzipProcessor import GzipProcessor
 from BytesChain.PlainProcessor import PlainProcessor
 from BytesChain.ZstdProcessor import ZstdProcessor
 from ddv.DdvFileInfo import DdvFileInfo, FileType
@@ -168,6 +169,7 @@ class FilePack:
             # 读取文件列表
             final_split_ab.seek(final_split_size - 8 - file_list_size)
             file_list = pickle.loads(final_split_ab.read(file_list_size))
+            bar = tqdm(total=file_list.packaged_total_size, colour="green", unit='MB')
             if type(file_list) != DdvFileMeta:
                 raise Exception("文件信息已损坏")
             # 读取压缩时使用的分块处理器
@@ -227,6 +229,7 @@ class FilePack:
                             else:
                                 curr_buffer_size = buffer_size
                             read = ddv.read(curr_buffer_size)
+                            bar.update(len(read))
                             if not read:
                                 if curr_file_readied_size == curr_file_size:
                                     self.handle_file_read_end(curr_file_info, curr_output_file, sha224)
@@ -272,7 +275,7 @@ class FilePack:
                     continue
         return file_map
 
-    def info(self,input_file):
+    def info(self, input_file):
         file_map = {}
         _dir, _ = os.path.split(input_file)
         for f in os.listdir(_dir):
@@ -314,9 +317,9 @@ class FilePack:
                 log.info(f"文件名：{f.name}，文件类型：{f.type}，源文件大小：{f.size}，打包后大小：{f.packed_size}")
             log.info(f"文件总计原始大小：{file_list.original_total_size}")
             log.info(f"文件总计打包后大小：{file_list.packaged_total_size}")
-            log.info(f"打包比例：{file_list.packaged_total_size/file_list.original_total_size}")
+            log.info(f"打包比例：{file_list.packaged_total_size / file_list.original_total_size}")
 
-    def start_backup(self, is_enc: bool, is_gzip: bool,is_z:bool, output_dir: str) -> list:
+    def start_backup(self, is_enc: bool, is_zip: bool, output_dir: str) -> list:
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
         if len(ignore_list) > 0:
@@ -328,11 +331,8 @@ class FilePack:
             processor = None
             if is_enc:
                 processor = EncryptProcessor(processor)
-            if is_z:
+            if is_zip:
                 processor = ZstdProcessor(processor)
-            else:
-                if is_gzip:
-                    processor = GzipProcessor(processor)
             pack_file_list = self.package(file_list, output_dir, processor)
             log.info(f"打包后的文件:{pack_file_list}")
             return pack_file_list
