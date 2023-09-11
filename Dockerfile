@@ -21,10 +21,11 @@ USER root
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
-
+RUN mkdir /.aligo && chown -R 1001:1001 /.aligo && chown -R 1001:1001 /app && chmod -R 755 /app
 # By best practices, don't run the code with root user
 USER 1001
 
 # Start the action server
-ENTRYPOINT ["python", "main.py"]
-CMD ["--mode task"]
+#ENTRYPOINT ["python", "main.py"]
+#CMD ["--mode task"]
+CMD ["ls"]
