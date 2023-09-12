@@ -38,6 +38,23 @@ docker run -itd --restart \
 -v <your_email_config.py>:/app/email_config.py \
 ddv12138/data-backup
 ```
+docker-compose.yml
+
+```shell
+version: '3.3'
+services:
+    data-backup:
+    image: ddv12138/data-backup
+    restart: unless-stopped
+    volumes:
+     - '<folder_need_backup_1>:/app/backup/<folder_need_backup_1>'
+     - '<folder_need_backup_2>:/app/backup/<folder_need_backup_2>'
+     - '<file_need_backup_1>:/app/backup/<file_need_backup_1>'
+     - '<file_need_backup_2>:/app/backup/<file_need_backup_2>'
+     - '<your_config.py>:/app/config.py'
+     - '<your_email_config.py>:/app/email_config.py'
+```
+
 其中```folder_need_backup_1```和```folder_need_backup_2```为需要备份的文件夹举例，映射到容器目录/app/backup下，需要备份的文件```file_need_backup_1```、```file_need_backup_2```类似，此外需要的配置文件也分别映射到容器对应位置
 
 以上只是一种配置情况举例，实际可以根据实际情况，自由调整配置文件以及容器的目录映射
