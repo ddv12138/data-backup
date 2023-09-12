@@ -13,7 +13,7 @@ exclude_list = [
 # 用来存放备份缓存的文件夹
 cache_dir = "cache/"
 # 加密的密钥
-password = "123456"
+password = "1234567"
 # 备份在阿里云盘的存放位置
 cloud_path = "mnt-backup"
 # 阿里云盘认证信息存放位置位置
