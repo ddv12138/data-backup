@@ -5,14 +5,14 @@ FROM python:3.8.5
 WORKDIR /app
 
 # Copy actions folder to working directory
-COPY src  /app/
+COPY src requirements.txt  /app/
 # Change back to root user to install dependencies
 USER root
 
 # Install extra requirements for actions code, if necessary (uncomment next line)
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && python -m pip install --upgrade pip \
-    && pip install -r src/requirements.txt \
+    && pip install -r requirements.txt \
     && mkdir /.aligo \
     && chown -R 1001:1001 /.aligo \
     && chown -R 1001:1001 /app \
