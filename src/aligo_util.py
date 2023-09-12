@@ -3,7 +3,6 @@ from log_util import log
 import config
 
 
-
 class AligoUtil:
     def __init__(self) -> None:
         super().__init__()

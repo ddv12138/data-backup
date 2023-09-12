@@ -5,10 +5,10 @@ import pickle
 from tqdm import tqdm
 
 import config
-from BytesChain.bytes_abstract_processor import BytesAbstractProcessor
-from BytesChain.encrypt_processor import EncryptProcessor
-from BytesChain.plain_processor import PlainProcessor
-from BytesChain.zstd_processor import ZstdProcessor
+from bytes_chain.bytes_abstract_processor import BytesAbstractProcessor
+from bytes_chain.encrypt_processor import EncryptProcessor
+from bytes_chain.plain_processor import PlainProcessor
+from bytes_chain.zstd_processor import ZstdProcessor
 from ddv.ddv_file_info import DdvFileInfo, FileType
 from ddv.ddv_file_meta import DdvFileMeta
 from log_util import log
