@@ -5,13 +5,13 @@ import pickle
 from tqdm import tqdm
 
 import config
-from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
-from BytesChain.EncryptProcessor import EncryptProcessor
-from BytesChain.PlainProcessor import PlainProcessor
-from BytesChain.ZstdProcessor import ZstdProcessor
-from ddv.DdvFileInfo import DdvFileInfo, FileType
-from ddv.DdvFileMeta import DdvFileMeta
-from LogUtil import log
+from BytesChain.bytes_abstract_processor import BytesAbstractProcessor
+from BytesChain.encrypt_processor import EncryptProcessor
+from BytesChain.plain_processor import PlainProcessor
+from BytesChain.zstd_processor import ZstdProcessor
+from ddv.ddv_file_info import DdvFileInfo, FileType
+from ddv.ddv_file_meta import DdvFileMeta
+from log_util import log
 
 MAGIC_NUM = "ddvudo".upper().encode("utf-8")
 magic_num_len = len(MAGIC_NUM)
@@ -340,4 +340,6 @@ class FilePack:
             pack_file_list = self.package(file_list, output_dir, processor)
             log.info(f"打包后的文件:{pack_file_list}")
             return pack_file_list
+        else:
+            raise Exception("未找到任何文件，请检查配置！")
         pass

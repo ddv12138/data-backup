@@ -1,6 +1,6 @@
 __pycache__
 .idea
 cache
-example
-email_config.py
+backup
+src/email_config.py
 aligo_config

@@ -1,5 +1,5 @@
 from aligo import Aligo, EMailConfig, set_config_folder
-from LogUtil import log
+from log_util import log
 import config
 
 

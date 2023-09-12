@@ -5,9 +5,7 @@ FROM python:3.8.5
 WORKDIR /app
 
 # Copy actions folder to working directory
-COPY ./BytesChain  /app/BytesChain
-COPY ./ddv  /app/ddv
-COPY ./AligoUtil.py ./config.py ./EncUtil.py ./FilePack.py ./LogUtil.py ./main.py ./requirements.txt /app/
+COPY src  /app/
 # Change back to root user to install dependencies
 USER root
 

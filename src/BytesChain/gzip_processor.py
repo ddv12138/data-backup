@@ -1,6 +1,6 @@
 import gzip
 
-from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
+from BytesChain.bytes_abstract_processor import BytesAbstractProcessor
 
 
 class GzipProcessor(BytesAbstractProcessor):

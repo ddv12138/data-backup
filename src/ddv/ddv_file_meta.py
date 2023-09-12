@@ -1,4 +1,4 @@
-from ddv.DdvFileInfo import DdvFileInfo
+from ddv.ddv_file_info import DdvFileInfo
 
 
 class DdvFileMeta:

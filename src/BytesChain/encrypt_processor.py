@@ -1,6 +1,6 @@
-import EncUtil
+import enc_util
 import config
-from BytesChain.BytesAbstractProcessor import BytesAbstractProcessor
+from BytesChain.bytes_abstract_processor import BytesAbstractProcessor
 
 
 class EncryptProcessor(BytesAbstractProcessor):
