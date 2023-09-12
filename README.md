@@ -66,8 +66,8 @@ services:
 docker run --rm ddv12138/data-backup python main.py backup
 ```
 
-### 查看上一次备份成功以后的打包信息
-参考[运行定时任务进行备份](#运行定时任务进行备份)中的1、2、3步编辑好配置文件以后，首先需要知道缓存文件存放位置，也就是配置文件中的 ```cache_dir```，然后取缓存文件路径，有分包的情况下，指定任意分包即可
+### 查看已经打包的文件的打包信息
+参考[运行定时任务进行备份](#运行定时任务进行备份)中的1、2、3步编辑好配置文件以后，首先需要知道缓存文件存放位置，也就是配置文件中的 ```cache_dir```，然后取文件路径，有分包的情况下，指定任意分包即可
 ```shell
 docker run --rm ddv12138/data-backup python main.py info -i cache/xxxx-xx-xx_xx.xx.xx/package.x.ddv
 ```
