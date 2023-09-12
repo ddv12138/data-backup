@@ -12,7 +12,7 @@ USER root
 # Install extra requirements for actions code, if necessary (uncomment next line)
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && python -m pip install --upgrade pip \
-    && pip install -r requirements.txt \
+    && pip install -r src/requirements.txt \
     && mkdir /.aligo \
     && chown -R 1001:1001 /.aligo \
     && chown -R 1001:1001 /app \
