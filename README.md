@@ -53,6 +53,7 @@ services:
      - '<file_need_backup_2>:/app/backup/<file_need_backup_2>'
      - '<your_config.py>:/app/config.py'
      - '<your_email_config.py>:/app/email_config.py'
+     - '<your_cache_dir>:/app/cache'
 ```
 
 其中```folder_need_backup_1```和```folder_need_backup_2```为需要备份的文件夹举例，映射到容器目录/app/backup下，需要备份的文件```file_need_backup_1```、```file_need_backup_2```类似，此外需要的配置文件也分别映射到容器对应位置
