@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Set Timestamp as Tag
         id: timestamp
-        run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
+        run: echo "::set-output name=timestamp::$(date +'%Y%m%d')"
         
       - name: Checkout Code
         uses: actions/checkout@v3
