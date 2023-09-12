@@ -6,7 +6,11 @@ on:
       - main  # 此处使用您的主分支名称
 
 jobs:
-  build-and-push:
+  - name: Set Timestamp as Tag
+    id: timestamp
+    run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
+
+  - build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +21,7 @@ jobs:
         run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
       - name: Build Docker Image
-        run: docker build -t ddv12138/data-backup:$(date +%s) .
+        run: docker build -t ddv12138/data-backup:${{ steps.timestamp.outputs.timestamp }} .
 
       - name: Push Docker Image
-        run: docker push ddv12138/data-backup:$(date +%s)
+        run: docker push ddv12138/data-backup:${{ steps.timestamp.outputs.timestamp }}
