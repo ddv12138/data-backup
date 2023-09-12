@@ -24,5 +24,5 @@ USER 1001
 
 # Start the action server
 #ENTRYPOINT ["python", "main.py"]
-#CMD ["--mode task"]
-CMD ["ls"]
+CMD ["python", "main.py","--mode task","-v","--progress"]
+
