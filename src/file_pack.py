@@ -57,8 +57,10 @@ class FilePack:
                             if excluded:
                                 continue
                             file_list.append(path)
+                            log.debug("处理文件" + path)
                 else:
                     file_list.append(s_file)
+                    log.debug("处理文件"+s_file)
         except Exception as e:
             log.error(e, exc_info=True, stack_info=True)
         return [file_list, ignore_list, err_list]
