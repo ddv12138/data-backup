@@ -29,7 +29,7 @@ docker push ddv12138/data-backup
 2. 如果使用邮箱接收二维码进行登陆验证```(推荐)```,还需要修改配置文件 [email_config_example.py](email_config_example.py)，重命名为 ```email_config.py```
 3. 准备好以上配置文件以后，假设```config.py```中include_list为默认的只有一个 ```backup```,docker启动命令如下
 ```
-docker run -itd --restart \
+docker run -itd --restart=unless-stopped \
 -v <folder_need_backup_1>:/app/backup/<folder_need_backup_1> \
 -v <folder_need_backup_2>:/app/backup/<folder_need_backup_2> \
 -v <file_need_backup_1>:/app/backup/<file_need_backup_1> \
