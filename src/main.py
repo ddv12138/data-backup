@@ -11,15 +11,15 @@ from aligo_util import AligoUtil
 from file_pack import FilePack
 from log_util import log
 
+aligo_util = AligoUtil()
+file_pack = FilePack()
 
 def do_backup():
     clear_cache()
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d_%H.%M.%S"))
-    file_pack = FilePack()
     file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
     log.info(output_dir)
-    aligo_util = AligoUtil()
     aligo_util.upload_backup(output_dir)
 
 
@@ -31,6 +31,7 @@ def task():
         now_ = next_execution_time - datetime.now()
         if now_.seconds % 5 == 0:
             log.debug(f"下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
+            log.debug(aligo_util.history())
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = iterator.get_next(datetime)
@@ -67,14 +68,14 @@ if __name__ == '__main__':
     parser.add_argument('--cache_dir', help='缓存文件路径')
     parser.add_argument('--password', help='加密用的密钥，妥善保存，解密需要用到')
     parser.add_argument('--passwd_file', help='(文件中读取)加密用的密钥，妥善保存，解密需要用到')
-    parser.add_argument('--cloud_path', help='阿里云用于备份的文件路径')
+    parser.add_argument('--cloud_path', help='阿里云盘用于备份的文件路径')
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
     parser.add_argument('--progress', action='count', help='进度条开关')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
     parser.add_argument('--input', '-i', help='配合info或者unpack模式，传入已有的打包文件路径，或是任意分包路径', )
-    parser.add_argument('--output', '-o', help='配合unpack模式,传入解包后文件的存放路径' )
+    parser.add_argument('--output', '-o', help='配合unpack模式,传入解包后文件的存放路径')
 
     args = parser.parse_args()
 
