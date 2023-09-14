@@ -11,8 +11,6 @@ from aligo_util import AligoUtil
 from file_pack import FilePack
 from log_util import log
 
-aligo_util = AligoUtil()
-file_pack = FilePack()
 
 def do_backup():
     clear_cache()
@@ -103,6 +101,10 @@ if __name__ == '__main__':
         config.log_level = logging.DEBUG
     if args.progress:
         config.progress = True
+
+    aligo_util = AligoUtil()
+    file_pack = FilePack()
+
     if args.mode:
         if args.mode == "task":
             task()
