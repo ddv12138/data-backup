@@ -30,6 +30,8 @@ def task():
         if now_.seconds % 5 == 0:
             log.debug(f"下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
             log.debug(aligo_util.history())
+        if now_.seconds % 900 == 0:
+            log.debug(aligo_util.history())
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = iterator.get_next(datetime)
