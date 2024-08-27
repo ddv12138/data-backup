@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
-
+from log_util import log
 
 def generate_nonce() -> bytes:
     return "".join(random.sample(string.ascii_letters + string.digits, 16)).encode("utf-8")
@@ -35,6 +35,7 @@ class EncUtil:
         self.nonce = passwd[:16].encode("utf-8")
         self.passwd = passwd
         self.key = self.generate_key(passwd)
+        log.debug(f"EncUtil init ----> passwd:{passwd} key:{self.key}, nonce:{self.nonce}, salt:{self}")
         self.cipher = Cipher(algorithms.ChaCha20(self.key.encode("utf-8"), self.nonce), mode=None,
                              backend=default_backend())
 
