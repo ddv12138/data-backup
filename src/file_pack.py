@@ -329,12 +329,12 @@ class FilePack:
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
         if len(ignore_list) > 0:
-            log.info(f"忽略的文件：{ignore_list}")
+            log.debug(f"忽略的文件：{ignore_list}")
         if len(err_list) > 0:
-            log.info(f"出错的文件：{err_list}")
+            log.error(f"出错的文件：{err_list}")
         if len(file_list) > 0:
             log.info(f"找到的文件：{file_list}")
-            processor = None
+            processor = PlainProcessor(None)
             if is_enc:
                 processor = EncryptProcessor(processor)
             if is_zip:
