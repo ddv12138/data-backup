@@ -30,7 +30,7 @@ class EncUtil:
     def __init__(self, passwd: str) -> None:
         super().__init__()
         self.salt = (passwd * 2).encode("utf-8")
-        while len(passwd < 16):
+        while len(passwd) < 16:
             passwd = passwd * 2
         self.nonce = passwd[:16].encode("utf-8")
         self.passwd = passwd
