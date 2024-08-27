@@ -60,7 +60,7 @@ class FilePack:
                             log.debug("处理文件" + path)
                 else:
                     file_list.append(s_file)
-                    log.debug("处理文件"+s_file)
+                    log.debug("处理文件" + s_file)
         except Exception as e:
             log.error(e, exc_info=True, stack_info=True)
         return [file_list, ignore_list, err_list]
@@ -135,6 +135,7 @@ class FilePack:
                             ddv.write(current_split.to_bytes(4, "big"))
             # 写入文件列表整体信息
             file_meta = DdvFileMeta(files, bytes_processor)
+            log.debug(f"pack bytes_processor:{bytes_processor}")
             for f in files:
                 file_meta.original_total_size += f.size
                 file_meta.packaged_total_size += f.packed_size
@@ -181,6 +182,7 @@ class FilePack:
                 raise Exception("文件信息已损坏")
             # 读取压缩时使用的分块处理器
             bytes_processor = file_list.bytes_processor
+            log.debug(f"unpack bytes_processor:{bytes_processor}")
         try:
             for _ in sorted(all_split):
                 curr_file = all_split[_]

@@ -22,7 +22,7 @@ def do_backup():
 
 
 def task():
-    iterator = croniter(config.cron_expression, datetime.now())
+    iterator = croniter(config.cron_expression, datetime(1970, 1, 1))
     next_execution_time = iterator.get_next(datetime)
     next_execution_time_2 = iterator.get_next(datetime)
     while True:
