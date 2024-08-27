@@ -4,7 +4,7 @@ from bytes_chain.bytes_abstract_processor import BytesAbstractProcessor
 from log_util import log
 
 class EncryptProcessor(BytesAbstractProcessor):
-    enc_util = enc_util.EncUtil(config.password,config.password*3)
+    enc_util = enc_util.EncUtil(config.password,config.password.encode("utf-8"))
 
     def __pack_process__(self, bytes_data: bytes) -> bytes:
         log.debug(f"EncryptProcessor packing {bytes_data}")
