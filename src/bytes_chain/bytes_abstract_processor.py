@@ -23,15 +23,10 @@ class BytesAbstractProcessor(ABC):
             return result
 
     def unpack(self, bytes_data: bytes) -> bytes:
-        # if self.next_processor:
-        #     return self.__unpack_process__(self.next_processor.unpack(bytes_data))
-        # else:
-        #     return self.__unpack_process__(bytes_data)
-        result = self.__unpack_process__(bytes_data)
         if self.next_processor:
-            return self.next_processor.unpack(result)
+            return self.__unpack_process__(self.next_processor.unpack(bytes_data))
         else:
-            return result
+            return self.__unpack_process__(bytes_data)
 
     def __str__(self) -> str:
         proc = self
