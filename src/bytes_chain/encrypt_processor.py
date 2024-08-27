@@ -7,9 +7,9 @@ class EncryptProcessor(BytesAbstractProcessor):
     enc_util = enc_util.EncUtil(config.password)
 
     def __pack_process__(self, bytes_data: bytes) -> bytes:
-        log.debug(f"EncryptProcessor packing {bytes}")
+        log.debug(f"EncryptProcessor packing {bytes_data}")
         return self.enc_util.encrypt_bytes(bytes_data)
 
     def __unpack_process__(self, bytes_data: bytes) -> bytes:
-        log.debug(f"EncryptProcessor unpacking {bytes}")
+        log.debug(f"EncryptProcessor unpacking {bytes_data}")
         return self.enc_util.decrypt_bytes(bytes_data)
