@@ -175,6 +175,7 @@ class FilePack:
             # 读取文件列表
             final_split_ab.seek(final_split_size - 8 - file_list_size)
             file_list = pickle.loads(final_split_ab.read(file_list_size))
+            log.debug(file_list)
             bar = tqdm(total=file_list.packaged_total_size, colour="green", unit='byte')
             if type(file_list) != DdvFileMeta:
                 raise Exception("文件信息已损坏")
@@ -190,6 +191,7 @@ class FilePack:
                         raise Exception(f"文件格式不匹配{curr_magic_num}")
                     # 读取分卷序号
                     split_seq = int.from_bytes(ddv.read(4), "big")
+                    log.debug(f"处理分卷序号：{split_seq}")
 
                     while True:
                         if curr_file_readied_size == curr_file_size:
