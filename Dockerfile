@@ -13,5 +13,5 @@ RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && echo 'Asia/Shanghai' >/etc/timezone
 
 ENTRYPOINT ["python", "main.py"]
-CMD ["task","-v","--progress"]
+CMD ["task","--progress"]
 
