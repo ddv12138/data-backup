@@ -28,7 +28,7 @@ def task():
     while True:
         now_ = next_execution_time - datetime.now()
         if now_.seconds % 5 == 0:
-            log.debug(f"定时任务表达式:{config.cron_expression},下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
+            log.info(f"定时任务表达式:{config.cron_expression},下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
         if now_.seconds % 900 == 0:
             log.debug(aligo_util.history())
         if datetime.now() > next_execution_time:
