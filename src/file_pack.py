@@ -9,6 +9,7 @@ from bytes_chain.bytes_abstract_processor import BytesAbstractProcessor
 from bytes_chain.encrypt_processor import EncryptProcessor
 from bytes_chain.gzip_processor import GzipProcessor
 from bytes_chain.plain_processor import PlainProcessor
+from bytes_chain.zstd_processor import ZstdProcessor
 from ddv.ddv_file_info import DdvFileInfo, FileType
 from ddv.ddv_file_meta import DdvFileMeta
 from log_util import log
@@ -342,7 +343,7 @@ class FilePack:
             if is_enc:
                 processor = EncryptProcessor(processor)
             if is_zip:
-                processor = GzipProcessor(processor)
+                processor = ZstdProcessor(processor)
             pack_file_list = self.package(file_list, output_dir, processor)
             log.info(f"打包后的文件:{pack_file_list}")
             return pack_file_list
