@@ -18,24 +18,12 @@ def generate_salt() -> bytes:
 
 class EncUtil:
 
-    # def __init__(self, passwd: str, salt: bytes = generate_salt(), nonce: bytes = generate_nonce()) -> None:
-    #     super().__init__()
-    #     self.salt = salt
-    #     self.nonce = nonce
-    #     self.passwd = passwd
-    #     self.key = self.generate_key(passwd)
-    #     self.cipher = Cipher(algorithms.ChaCha20(self.key.encode("utf-8"), self.nonce), mode=None,
-    #                          backend=default_backend())
-
-    def __init__(self, passwd: str) -> None:
+    def __init__(self, passwd: str, salt: bytes = generate_salt(), nonce: bytes = generate_nonce()) -> None:
         super().__init__()
-        self.salt = (passwd * 2).encode("utf-8")
-        while len(passwd) < 16:
-            passwd = passwd * 2
-        self.nonce = passwd[:16].encode("utf-8")
+        self.salt = salt
+        self.nonce = nonce
         self.passwd = passwd
         self.key = self.generate_key(passwd)
-        log.debug(f"EncUtil init ----> passwd:{passwd} key:{self.key}, nonce:{self.nonce}, salt:{self}")
         self.cipher = Cipher(algorithms.ChaCha20(self.key.encode("utf-8"), self.nonce), mode=None,
                              backend=default_backend())
 
