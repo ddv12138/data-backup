@@ -17,8 +17,8 @@ def do_backup():
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y-%m-%d"))
     file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
-    log.info(output_dir)
-    # aligo_util.upload_backup(output_dir)
+    log.info(f"output_dir:{output_dir}")
+    aligo_util.upload_backup(output_dir)
 
 
 def task():
