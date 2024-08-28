@@ -22,18 +22,18 @@ def do_backup():
 
 
 def task():
-    iterator = croniter(config.cron_expression, datetime(1970, 1, 1))
+    iterator = croniter(config.cron_expression, datetime.now())
     next_execution_time = iterator.get_next(datetime)
     next_execution_time_2 = iterator.get_next(datetime)
     while True:
         now_ = next_execution_time - datetime.now()
         if now_.seconds % 5 == 0:
-            log.debug(f"下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
+            log.debug(f"定时任务表达式:{config.cron_expression},下次执行倒计时 {now_} 接下来两次执行时间 {next_execution_time} {next_execution_time_2}")
         if now_.seconds % 900 == 0:
             log.debug(aligo_util.history())
         if datetime.now() > next_execution_time:
             do_backup()
-            next_execution_time = iterator.get_next(datetime)
+            next_execution_time = next_execution_time_2
             next_execution_time_2 = iterator.get_next(datetime)
             log.debug(f"备份执行完成,等待下次激活,下次执行时间 {next_execution_time}")
         time.sleep(1)
