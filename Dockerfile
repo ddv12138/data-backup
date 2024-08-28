@@ -1,15 +1,7 @@
-# Extend the official Rasa SDK image
 FROM python:3.8.5
-
-# Use subdirectory as working directory
 WORKDIR /app
-
-# Copy actions folder to working directory
 COPY src requirements.txt  /app/
-# Change back to root user to install dependencies
 USER root
-
-# Install extra requirements for actions code, if necessary (uncomment next line)
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && python -m pip install --upgrade pip \
     && pip install -r requirements.txt \
@@ -20,7 +12,6 @@ RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo 'Asia/Shanghai' >/etc/timezone
 
-# Start the action server
 ENTRYPOINT ["python", "main.py"]
 CMD ["--mode","task","-v","--progress"]
 
