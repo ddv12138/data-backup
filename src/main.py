@@ -23,8 +23,8 @@ def do_backup():
 
 def task():
     iterator = croniter(config.cron_expression, datetime.now())
-    next_execution_time = iterator.get_next(datetime)
-    next_execution_time_2 = iterator.get_next(datetime)
+    next_execution_time = iterator.get_next()
+    next_execution_time_2 = iterator.get_next()
     while True:
         now_ = next_execution_time - datetime.now()
         if now_.seconds % 5 == 0:
@@ -34,7 +34,7 @@ def task():
         if datetime.now() > next_execution_time:
             do_backup()
             next_execution_time = next_execution_time_2
-            next_execution_time_2 = iterator.get_next(datetime)
+            next_execution_time_2 = iterator.get_next()
             log.info(f"备份执行完成,等待下次激活,下次执行时间 {next_execution_time}")
         time.sleep(1)
 
