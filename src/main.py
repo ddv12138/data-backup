@@ -35,7 +35,7 @@ def task():
             do_backup()
             next_execution_time = next_execution_time_2
             next_execution_time_2 = iterator.get_next(datetime)
-            log.debug(f"备份执行完成,等待下次激活,下次执行时间 {next_execution_time}")
+            log.info(f"备份执行完成,等待下次激活,下次执行时间 {next_execution_time}")
         time.sleep(1)
 
 
