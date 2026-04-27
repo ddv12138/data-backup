@@ -34,6 +34,7 @@ class AligoUtil:
 
     def history(self):
         cloud_path = self.aligo.get_folder_by_path(config.cloud_path)
+        # Return empty list when the cloud directory does not exist yet
         if cloud_path is None:
             return []
         return self.aligo.get_file_list(parent_file_id=cloud_path.file_id)
