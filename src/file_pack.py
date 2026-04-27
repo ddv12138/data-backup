@@ -398,14 +398,10 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 既然用户决定使用 Zstd (astd)，我们将重新启用该算法以获得极致的压缩速度。
-            # 请确保宿主机已安装支持 Zstd 的 7-Zip 版本 (如 7zz)。
-            if FILTER_ZSTD is not None:
-                filters = [{"id": FILTER_ZSTD, "level": 3}]
-                log.info(f"使用 Zstd 压缩算法 (极致速度模式)")
-            else:
-                filters = None
-                log.info(f"未检测到 Zstd 支持，回退到默认 LZMA2 算法")
+            # 最终方案：使用最兼容的 LZMA2，但通过最轻量级的级别 1 来换取极高性能。
+            # 这不需要任何特殊插件，任何 7zip 工具都能解压，且速度非常快。
+            filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
+            log.info(f"使用 LZMA2 快速模式 (Preset 1, 兼容性 100%)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
                                     filters=filters,
