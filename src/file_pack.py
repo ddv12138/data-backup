@@ -382,6 +382,7 @@ class FilePack:
 
                 bar = tqdm(total=100, unit="%", desc="7z 压缩", colour="green")
                 last_pct = 0
+                last_log_pct = 0.0
                 buf = ""
                 try:
                     while True:
@@ -395,6 +396,9 @@ class FilePack:
                                 if pct > last_pct:
                                     bar.update(pct - last_pct)
                                     last_pct = pct
+                                if pct >= last_log_pct + 0.5 or pct == 100:
+                                    log.info(f"7z 压缩进度: {pct}%")
+                                    last_log_pct = pct
                             buf = ""
                         else:
                             buf += ch
