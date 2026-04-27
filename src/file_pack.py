@@ -420,37 +420,33 @@ class FilePack:
         try:
             log.info(f"正在进行 7z (LZMA2快速模式) 压缩：{archive_path}")
             
-            valid_files = [f for f in file_list if os.path.isfile(f)]
-            total_size = sum(os.path.getsize(f) for f in valid_files)
+            show_progress = getattr(config, 'progress', False)
             
-            # 使用 tqdm 的总进度条
-            bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
+            # 计算总大小和文件总数用于进度展示
+            total_files = len([f for f in file_list if os.path.isfile(f)])
+            total_size = sum(os.path.getsize(f) for f in file_list if os.path.isfile(f))
+            processed_files = 0
+            processed_size = 0
+            last_log_pct = -1.0 # 确保 0% 也能输出
 
-            # 定义一个带有进度更新的文件仿制对象
-            class ProgressiveFile:
-                def __init__(self, file_path, callback):
-                    self.file_path = file_path
-                    self.callback = callback
-                    self.fd = open(file_path, 'rb')
+            # 进度条处理
+            bar = None
+            if show_progress:
+                bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
+
+            def log_progress(added_size):
+                nonlocal last_log_pct, processed_size, processed_files
+                processed_size += added_size
+                if bar:
+                    bar.update(added_size)
                 
-                # 模拟 pathlib.Path 接口，py7zr writeall 会检查是否存在
-                def exists(self): return os.path.exists(self.file_path)
-                def is_file(self): return os.path.isfile(self.file_path)
-                def is_dir(self): return os.path.isdir(self.file_path)
-                def stat(self): return os.stat(self.file_path)
-                    
-                def read(self, size=-1):
-                    data = self.fd.read(size)
-                    if data:
-                        self.callback(len(data))
-                    return data
-                
-                def seek(self, offset, whence=0): return self.fd.seek(offset, whence)
-                
-                def tell(self): return self.fd.tell()
-                def close(self): self.fd.close()
-                def __enter__(self): return self
-                def __exit__(self, *args): self.close()
+                if total_size > 0:
+                    pct = round(processed_size / total_size * 100, 2)
+                    if pct >= last_log_pct + 0.01 or pct >= 100:
+                        size_str = f"{self.format_size(processed_size)}/{self.format_size(total_size)}"
+                        file_str = f"{processed_files}/{total_files} files"
+                        log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
+                        last_log_pct = pct
 
             # 使用最兼容的 LZMA2，Preset 1 换取极高性能
             filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
@@ -458,16 +454,20 @@ class FilePack:
             with py7zr.SevenZipFile(archive_path, 'w', filters=filters, 
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
-                for f in valid_files:
-                    # 通过包装文件对象，实现在读取数据（即写入压缩包）时实时更新进度条
-                    with ProgressiveFile(f, bar.update) as pf:
-                        # 传入文件名而非 path 对象，让 py7zr 使用我们包装后的流
-                        archive.writeall(pf, f)
+                for f in file_list:
+                    if os.path.isfile(f):
+                        archive.write(f, arcname=f)
+                        processed_files += 1
+                        file_size = os.path.getsize(f)
+                        log_progress(file_size)
             
             if bar:
                 bar.close()
                 
             return self._split_if_needed(archive_path, output_dir)
+        except Exception as e:
+            log.error(f"7z 压缩失败: {e}")
+            raise e
         except Exception as e:
             log.error(f"7z 压缩失败: {e}")
             raise e
