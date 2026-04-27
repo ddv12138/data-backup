@@ -446,6 +446,7 @@ class FilePack:
                     return data
                 
                 def seek(self, offset, whence=0): return self.fd.seek(offset, whence)
+                
                 def tell(self): return self.fd.tell()
                 def close(self): self.fd.close()
                 def __enter__(self): return self
