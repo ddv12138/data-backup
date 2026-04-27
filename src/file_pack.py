@@ -382,7 +382,7 @@ class FilePack:
             # 进度条处理
             bar = None
             if show_progress:
-                bar = tqdm(total=total_size, colour="green", unit='byte', desc="7z 压缩")
+                bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
 
             def log_progress(added_size):
                 nonlocal last_log_pct, processed_size
