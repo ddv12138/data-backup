@@ -2,7 +2,8 @@ FROM python:3.8.5
 WORKDIR /app
 COPY src requirements.txt  /app/
 USER root
-RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+RUN apt-get update && apt-get install -y p7zip-full && rm -rf /var/lib/apt/lists/* \
+    && pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && python -m pip install --upgrade pip \
     && pip install -r requirements.txt \
     && mkdir /.aligo \

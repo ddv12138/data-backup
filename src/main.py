@@ -16,7 +16,10 @@ def do_backup():
     clear_cache()
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y%m%d_%H%M%S"))
-    file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
+    if config.backup_format == "7z":
+        file_pack.start_backup_7z(is_enc=config.is_enc, output_dir=output_dir)
+    else:
+        file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
     log.info(f"output_dir:{output_dir}")
     aligo_util.upload_backup(output_dir)
 
@@ -69,8 +72,10 @@ if __name__ == '__main__':
     parser.add_argument('--config_path', help='配置文件存储路径')
     parser.add_argument('--cron_expression', help='定时任务表达式')
     parser.add_argument('--max_copy_count', help='云端保存的最大备份数量')
-    parser.add_argument('--progress', action='count', help='进度条开关')
+    parser.add_argument('--backup_format', choices=['ddv', '7z'],
+                        help='备份格式：ddv（自定义格式）或 7z（系统 7z 命令）')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
+    parser.add_argument('--progress', "-p", action="store_true", help='展示压缩进度条')
     parser.add_argument('--input', '-i', help='配合info或者unpack模式，传入已有的打包文件路径，或是任意分包路径', )
     parser.add_argument('--output', '-o', help='配合unpack模式,传入解包后文件的存放路径')
 
@@ -105,6 +110,8 @@ if __name__ == '__main__':
         config.log_level = logging.DEBUG
     if args.progress:
         config.progress = True
+    if args.backup_format:
+        config.backup_format = args.backup_format
 
     aligo_util = AligoUtil()
     file_pack = FilePack()
