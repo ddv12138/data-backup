@@ -75,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('--backup_format', choices=['ddv', '7z'],
                         help='备份格式：ddv（自定义格式）或 7z（系统 7z 命令）')
     parser.add_argument('--verbose', "-v", action="count", help='展示更详细的执行过程')
+    parser.add_argument('--progress', "-p", action="store_true", help='展示压缩进度条')
     parser.add_argument('--input', '-i', help='配合info或者unpack模式，传入已有的打包文件路径，或是任意分包路径', )
     parser.add_argument('--output', '-o', help='配合unpack模式,传入解包后文件的存放路径')
 

@@ -1,8 +1,10 @@
 import hashlib
 import os
 import pickle
+import re
 import subprocess
 import tempfile
+import threading
 
 from tqdm import tqdm
 
@@ -19,6 +21,7 @@ from log_util import log
 MAGIC_NUM = "ddvudo".upper().encode("utf-8")
 magic_num_len = len(MAGIC_NUM)
 MAGIC_NUM_END = 4294967295
+COMPRESSION_TIMEOUT_SECONDS = 10800  # 3 hours
 
 
 class FilePack:
@@ -359,13 +362,63 @@ class FilePack:
                 # 注意：密码通过命令行参数传递，在多用户系统上可能被 ps 看到
                 cmd += [f"-p{config.password}", "-mhe=on"]
             log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10800)
-            except FileNotFoundError:
-                raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
-            if result.returncode != 0:
-                log.error(f"7z 命令执行失败，stdout：{result.stdout}，stderr：{result.stderr}")
-                raise Exception(f"7z 压缩失败，返回码：{result.returncode}\n{result.stderr}")
+            if config.progress:
+                cmd += ["-bsp1"]
+                try:
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                               bufsize=0)
+                except FileNotFoundError:
+                    raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
+                stderr_lines = []
+
+                def _read_stderr():
+                    for line in process.stderr:
+                        stderr_lines.append(line)
+
+                stderr_thread = threading.Thread(target=_read_stderr, daemon=True)
+                stderr_thread.start()
+
+                bar = tqdm(total=100, unit="%", desc="7z 压缩", colour="green")
+                last_pct = 0
+                buf = ""
+                try:
+                    while True:
+                        ch = process.stdout.read(1)
+                        if not ch:
+                            break
+                        if ch == "\r" or ch == "\n":
+                            m = re.search(r"(\d+)%", buf)
+                            if m:
+                                pct = int(m.group(1))
+                                if pct > last_pct:
+                                    bar.update(pct - last_pct)
+                                    last_pct = pct
+                            buf = ""
+                        else:
+                            buf += ch
+                finally:
+                    bar.update(100 - last_pct)
+                    bar.close()
+                    stderr_thread.join()
+
+                try:
+                    process.wait(timeout=COMPRESSION_TIMEOUT_SECONDS)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                    raise Exception("7z 压缩超时（超过 3 小时）")
+                if process.returncode != 0:
+                    stderr_output = "".join(stderr_lines)
+                    log.error(f"7z 命令执行失败，stderr：{stderr_output}")
+                    raise Exception(f"7z 压缩失败，返回码：{process.returncode}\n{stderr_output}")
+            else:
+                try:
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=COMPRESSION_TIMEOUT_SECONDS)
+                except FileNotFoundError:
+                    raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
+                if result.returncode != 0:
+                    log.error(f"7z 命令执行失败，stdout：{result.stdout}，stderr：{result.stderr}")
+                    raise Exception(f"7z 压缩失败，返回码：{result.returncode}\n{result.stderr}")
             log.info(f"7z 压缩完成：{archive_path}")
         finally:
             if tmp_path is not None and os.path.exists(tmp_path):
