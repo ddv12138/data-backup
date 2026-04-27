@@ -1,4 +1,5 @@
 import hashlib
+import multiprocessing
 import os
 import pickle
 import py7zr
@@ -18,6 +19,12 @@ from bytes_chain.zstd_processor import ZstdProcessor
 from ddv.ddv_file_info import DdvFileInfo, FileType
 from ddv.ddv_file_meta import DdvFileMeta
 from log_util import log
+
+try:
+    from py7zr import FILTER_ZSTD
+except ImportError:
+    FILTER_ZSTD = None
+from py7zr import FILTER_LZMA2
 
 MAGIC_NUM = "ddvudo".upper().encode("utf-8")
 magic_num_len = len(MAGIC_NUM)
@@ -382,7 +389,19 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
+            # 配置优化过滤器
+            threads = multiprocessing.cpu_count()
+            if FILTER_ZSTD is not None:
+                # 使用 Zstd 算法，速度最快
+                filters = [{"id": FILTER_ZSTD, "level": 3}]
+                log.info(f"使用 Zstd 压缩算法 (多线程: {threads})")
+            else:
+                # 退而求其次使用多线程 LZMA2
+                filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
+                log.info(f"使用 LZMA2 压缩算法 (多线程: {threads}, preset: 3)")
+
             with py7zr.SevenZipFile(archive_path, 'w', 
+                                    filters=filters,
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
                 for f in file_list:
