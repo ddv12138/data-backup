@@ -96,7 +96,7 @@ class FilePack:
             # 写入当前分卷序号
             ddv.write(current_split.to_bytes(4, "big"))
             for f in files:
-                if config.progress:
+                if getattr(config, 'progress', False):
                     bar = tqdm(total=f.size, colour="green", unit='byte')
                 file_index = files.index(f)
                 file_seq = file_index.to_bytes(4, "big")
@@ -122,8 +122,7 @@ class FilePack:
                                 f"文件大小记录 文件名：{f.name} 文件类型：{f.type} 文件大小：{f.size} 打包后大小：{f.packed_size}")
                             break
                         sha224.update(read)
-                        if config.progress:
-                            bar.update(len(read))
+                        if getattr(config, 'progress', False):
                         read = bytes_processor.pack(read)
                         part_size = len(read)
                         curr_file_size += part_size
@@ -145,9 +144,11 @@ class FilePack:
             for f in files:
                 file_meta.original_total_size += f.size
                 file_meta.packaged_total_size += f.packed_size
+            compression_ratio = (file_meta.packaged_total_size / file_meta.original_total_size
+                                  if file_meta.original_total_size > 0 else 'N/A')
             log.info(f"源文件总计大小：{file_meta.original_total_size},"
                      f"处理后总计大小：{file_meta.packaged_total_size},"
-                     f"比例：{file_meta.packaged_total_size / file_meta.original_total_size}")
+                     f"比例：{compression_ratio}")
             files_info_dumps = pickle.dumps(file_meta)
             file_meta_len = len(files_info_dumps)
             file_meta_len_to_bytes = file_meta_len.to_bytes(4, "big")
@@ -362,8 +363,7 @@ class FilePack:
                 # 注意：密码通过命令行参数传递，在多用户系统上可能被 ps 看到
                 cmd += [f"-p{config.password}", "-mhe=on"]
             log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
-            if config.progress:
-                cmd += ["-bsp1"]
+            if getattr(config, 'progress', False):
                 try:
                     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                                bufsize=0)

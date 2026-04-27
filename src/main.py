@@ -16,7 +16,7 @@ def do_backup():
     clear_cache()
     log.info("开始执行备份")
     output_dir = os.path.normpath(config.cache_dir + "/package/" + datetime.now().strftime("%Y%m%d_%H%M%S"))
-    if config.backup_format == "7z":
+    if getattr(config, 'backup_format', 'ddv') == "7z":
         file_pack.start_backup_7z(is_enc=config.is_enc, output_dir=output_dir)
     else:
         file_pack.start_backup(is_enc=config.is_enc, is_zip=config.is_zip, output_dir=output_dir)
