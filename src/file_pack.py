@@ -423,20 +423,38 @@ class FilePack:
             valid_files = [f for f in file_list if os.path.isfile(f)]
             total_size = sum(os.path.getsize(f) for f in valid_files)
             
+            # 使用 tqdm 的总进度条
+            bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
+
+            # 定义一个带有进度更新的文件仿制对象
+            class ProgressiveFile:
+                def __init__(self, file_path, callback):
+                    self.file_path = file_path
+                    self.callback = callback
+                    self.fd = open(file_path, 'rb')
+                    
+                def read(self, size=-1):
+                    data = self.fd.read(size)
+                    if data:
+                        self.callback(len(data))
+                    return data
+                
+                def seek(self, offset, whence=0): return self.fd.seek(offset, whence)
+                def tell(self): return self.fd.tell()
+                def close(self): self.fd.close()
+                def __enter__(self): return self
+                def __exit__(self, *args): self.close()
+
             # 使用最兼容的 LZMA2，Preset 1 换取极高性能
             filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
             
-            # 恢复到之前最纯洁的 tqdm 模式，确保 mininterval 设置得小一点以应对快速处理
-            # 增加 dynamic_ncols=True 自动适配 Docker 终端宽度
-            bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩", mininterval=0.1)
-
             with py7zr.SevenZipFile(archive_path, 'w', filters=filters, 
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
                 for f in valid_files:
-                    archive.write(f, arcname=f)
-                    if bar:
-                        bar.update(os.path.getsize(f))
+                    # 通过包装文件对象，实现在读取数据（即写入压缩包）时实时更新进度条
+                    with ProgressiveFile(f, bar.update) as pf:
+                        archive.writeall(pf, arcname=f)
             
             if bar:
                 bar.close()
