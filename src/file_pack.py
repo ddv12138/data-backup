@@ -123,6 +123,7 @@ class FilePack:
                             break
                         sha224.update(read)
                         if getattr(config, 'progress', False):
+                            bar.update(len(read))
                         read = bytes_processor.pack(read)
                         part_size = len(read)
                         curr_file_size += part_size
@@ -364,6 +365,7 @@ class FilePack:
                 cmd += [f"-p{config.password}", "-mhe=on"]
             log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
             if getattr(config, 'progress', False):
+                cmd += ["-bsp1"]
                 try:
                     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                                bufsize=0)
