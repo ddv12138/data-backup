@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 WORKDIR /app
 COPY src requirements.txt  /app/
 USER root
-RUN apt-get update && apt-get install -y p7zip-full && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y p7zip-full zstd tar pv && rm -rf /var/lib/apt/lists/* \
     && pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && python -m pip install --upgrade pip \
     && pip install -r requirements.txt \

@@ -358,78 +358,58 @@ class FilePack:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        archive_path = os.path.join(output_dir, "package.7z")
+        # 改为使用 tar.zst 格式，极致速度且通用性好
+        archive_path = os.path.join(output_dir, "package.tar.zst")
 
         try:
-            log.info(f"正在压缩到 7z：{archive_path}" + (" [加密]" if is_enc else ""))
+            log.info(f"正在压缩到 tar.zst：{archive_path}")
             
-            show_progress = getattr(config, 'progress', False)
+            # 使用 tar + zstd 管道
+            valid_files = [f for f in file_list if os.path.exists(f)]
+            total_size = sum(os.path.getsize(f) for f in valid_files if os.path.isfile(f))
             
-            # 计算总大小和文件总数用于进度展示
-            total_files = len([f for f in file_list if os.path.isfile(f)])
-            total_size = sum(os.path.getsize(f) for f in file_list if os.path.isfile(f))
-            processed_files = 0
-            processed_size = 0
-            last_log_pct = -1.0 # 确保 0% 也能输出
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.list') as f_list:
+                for f in valid_files:
+                    f_list.write(f + '\n')
+                list_name = f_list.name
 
-            def format_size(size):
-                for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-                    if size < 1024.0:
-                        return f"{size:.2f} {unit}"
-                    size /= 1024.0
-                return f"{size:.2f} PB"
-
-            # 进度条处理
-            bar = None
-            if show_progress:
-                bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
-
-            def log_progress(added_size):
-                nonlocal last_log_pct, processed_size
-                processed_size += added_size
-                if bar:
-                    bar.update(added_size)
+            try:
+                # 使用 pv (Pipe Viewer) 监控进度
+                # zstd -3 --threads=0 满载多线程压缩
+                # 如果系统没装 pv，会回退到普通模式
+                pv_cmd = f"pv -s {total_size} -N '压缩进度'"
+                tar_cmd = f"tar -c -P --files-from={list_name}"
+                zstd_cmd = f"zstd -3 --threads=0 -o \"{archive_path}\""
                 
-                if total_size > 0:
-                    pct = round(processed_size / total_size * 100, 2)
-                    if pct >= last_log_pct + 0.01 or pct >= 100:
-                        size_str = f"{format_size(processed_size)}/{format_size(total_size)}"
-                        file_str = f"{processed_files}/{total_files} files"
-                        log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
-                        last_log_pct = pct
+                # 检查 pv 是否存在
+                has_pv = subprocess.run("command -v pv", shell=True, capture_output=True).returncode == 0
+                
+                if has_pv:
+                    full_cmd = f"{tar_cmd} | {pv_cmd} | {zstd_cmd}"
+                else:
+                    log.warning("未检测到 pv 工具，无法显示实时进度。建议在 Dockerfile 中安装 pv。")
+                    full_cmd = f"{tar_cmd} | {zstd_cmd}"
 
-            # 最终方案：使用最兼容的 LZMA2，但通过最轻量级的级别 1 来换取极高性能。
-            # 这不需要任何特殊插件，任何 7zip 工具都能解压，且速度非常快。
-            filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
-            log.info(f"使用 LZMA2 快速模式 (Preset 1, 兼容性 100%)")
-
-            with py7zr.SevenZipFile(archive_path, 'w', 
-                                    filters=filters,
-                                    password=config.password if is_enc else None,
-                                    header_encryption=is_enc) as archive:
-                for f in file_list:
-                    if os.path.isfile(f):
-                        # 保持路径结构
-                        archive.write(f, arcname=f)
-                        processed_files += 1
-                        file_size = os.path.getsize(f)
-                        log_progress(file_size)
+                log.info(f"执行命令: {full_cmd}")
+                
+                # 使用 subprocess.run 时，如果是 shell 模式，stdout 会流向终端显示 pv 的进度条
+                result = subprocess.run(full_cmd, shell=True, check=True)
+                
+            finally:
+                if os.path.exists(list_name):
+                    os.remove(list_name)
             
-            if bar:
-                bar.close()
-            
-            log.info(f"7z 压缩完成：{archive_path}")
+            log.info(f"tar.zst 压缩完成：{archive_path}")
 
-            # 分卷处理
-            split_size = getattr(config, 'split_size', 1024 * 1024 * 1024)  # 默认 1GB
+            # 分卷处理 (保持高效缓冲区逻辑)
+            split_size = getattr(config, 'split_size', 1024 * 1024 * 1024)
             full_size = os.path.getsize(archive_path)
 
             if split_size > 0 and full_size > split_size:
                 log.info(f"文件大小 ({full_size}) 超过分卷设置 ({split_size})，开始快速分卷切割...")
                 part_files = []
                 part_num = 1
-                # 使用较大的缓冲区提升 I/O 效率 (100MB)
-                copy_buffer_size = 100 * 1024 * 1024 
+                copy_buffer_size = 100 * 1024 * 1024  # 100MB 缓冲区
                 with open(archive_path, 'rb') as f:
                     while True:
                         part_path = f"{archive_path}.{part_num:03d}"
@@ -442,24 +422,20 @@ class FilePack:
                                 p.write(chunk)
                                 bytes_to_read -= len(chunk)
                         
-                        if bytes_to_read == split_size: # 说明没读到数据就结束了
-                            os.remove(part_path) 
+                        if bytes_to_read == split_size:
+                            if os.path.exists(part_path): os.remove(part_path)
                             break
                             
                         part_files.append(part_path)
                         log.info(f"已生成分卷: {part_path}")
                         part_num += 1
-                        if len(chunk) < min(copy_buffer_size, bytes_to_read + len(chunk)) and bytes_to_read > 0:
-                            break
-                            
-                os.remove(archive_path)  # 删除原大文件
+                
+                os.remove(archive_path)
                 return part_files
 
         except Exception as e:
-            log.error(f"7z 压缩失败: {e}")
+            log.error(f"压缩失败: {e}")
             raise e
-        finally:
-            pass
         return [archive_path]
 
     def start_backup(self, is_enc: bool, is_zip: bool, output_dir: str) -> list:
