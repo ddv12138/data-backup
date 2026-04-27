@@ -26,8 +26,8 @@ max_copy_count = 10
 is_enc = True
 # 是否压缩
 is_zip = True
-# 备份格式：ddv（自定义格式）或 7z（使用系统 7z 命令，兼容所有 7z 客户端）
-backup_format = "ddv"
+# 备份格式：ddv (自定义), 7z (兼容 7z 客户端), zstd (极速 tar.zst)
+backup_format = "zstd"
 # 日志级别
 log_level = logging.INFO
 progress = False

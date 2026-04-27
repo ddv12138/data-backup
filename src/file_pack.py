@@ -365,13 +365,18 @@ class FilePack:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        # 改为使用 tar.zst 格式，极致速度且通用性好
-        archive_path = os.path.join(output_dir, "package.tar.zst")
+        format_type = getattr(config, 'backup_format', '7z').lower()
+        
+        if format_type == "zstd":
+            return self._backup_zstd(file_list, output_dir)
+        else:
+            return self._backup_7z_lzma(file_list, is_enc, output_dir)
 
+    def _backup_zstd(self, file_list: list, output_dir: str) -> list:
+        # 之前的 zstd 实现逻辑
+        archive_path = os.path.join(output_dir, "package.tar.zst")
         try:
-            log.info(f"正在压缩到 tar.zst：{archive_path}")
-            
-            # 使用 tar + zstd 管道
+            log.info(f"正在进行 zstd 极速压缩：{archive_path}")
             valid_files = [f for f in file_list if os.path.exists(f)]
             total_size = sum(os.path.getsize(f) for f in valid_files if os.path.isfile(f))
             
@@ -381,94 +386,75 @@ class FilePack:
                 list_name = f_list.name
 
             try:
-                # 检查 pv 是否存在
                 has_pv = subprocess.run("command -v pv", shell=True, capture_output=True).returncode == 0
-                
-                # 待处理信息
                 log.info(f"待处理总大小: {self.format_size(total_size)}，文件总数: {len(valid_files)}")
 
                 if has_pv:
-                    # -n: 输出数字百分比 (用于 Python log)
-                    # -f: 强制输出进度
-                    # -i 1: 每秒更新一次
                     pv_cmd = f"pv -n -f -i 1 -s {total_size} -N '压缩进度'"
                     full_cmd = f"stdbuf -oL tar -c -P --files-from={list_name} | {pv_cmd} | zstd -3 --threads=0 -o \"{archive_path}\""
                 else:
-                    log.warning("未检测到 pv 工具，无法显示实时进度。")
                     full_cmd = f"tar -c -P --files-from={list_name} | zstd -3 --threads=0 -o \"{archive_path}\""
 
-                log.info(f"执行命令: {full_cmd}")
-                
-                # 重新设计读取逻辑，确保实时捕获
-                process = subprocess.Popen(
-                    full_cmd, 
-                    shell=True, 
-                    stdout=subprocess.PIPE, 
-                    stderr=subprocess.STDOUT, 
-                    text=True, 
-                    bufsize=1,
-                    universal_newlines=True
-                )
-                
+                process = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
                 last_pct = -1
-                if has_pv:
-                    for line in iter(process.stdout.readline, ""):
-                        content = line.strip()
-                        if content.isdigit():
-                            curr_pct = int(content)
-                            if curr_pct > last_pct:
-                                # 计算已处理大小供参考
-                                processed_size = int(total_size * curr_pct / 100)
-                                log.info(f"压缩进度: {curr_pct}% ({self.format_size(processed_size)} / {self.format_size(total_size)})")
-                                last_pct = curr_pct
-                        elif content:
-                            log.debug(f"压缩输出: {content}")
-                
+                for line in iter(process.stdout.readline, ""):
+                    content = line.strip()
+                    if content.isdigit():
+                        curr_pct = int(content)
+                        if curr_pct > last_pct:
+                            processed_size = int(total_size * curr_pct / 100)
+                            log.info(f"压缩进度: {curr_pct}% ({self.format_size(processed_size)} / {self.format_size(total_size)})")
+                            last_pct = curr_pct
                 process.wait()
-                if process.returncode != 0:
-                    raise Exception(f"压缩命令执行失败，退出码: {process.returncode}")
-                
             finally:
-                if os.path.exists(list_name):
-                    os.remove(list_name)
+                if os.path.exists(list_name): os.remove(list_name)
             
-            log.info(f"tar.zst 压缩完成：{archive_path}")
-
-            # 分卷处理 (保持高效缓冲区逻辑)
-            split_size = getattr(config, 'split_size', 1024 * 1024 * 1024)
-            full_size = os.path.getsize(archive_path)
-
-            if split_size > 0 and full_size > split_size:
-                log.info(f"文件大小 ({full_size}) 超过分卷设置 ({split_size})，开始快速分卷切割...")
-                part_files = []
-                part_num = 1
-                copy_buffer_size = 100 * 1024 * 1024  # 100MB 缓冲区
-                with open(archive_path, 'rb') as f:
-                    while True:
-                        part_path = f"{archive_path}.{part_num:03d}"
-                        bytes_to_read = split_size
-                        with open(part_path, 'wb') as p:
-                            while bytes_to_read > 0:
-                                chunk = f.read(min(copy_buffer_size, bytes_to_read))
-                                if not chunk:
-                                    break
-                                p.write(chunk)
-                                bytes_to_read -= len(chunk)
-                        
-                        if bytes_to_read == split_size:
-                            if os.path.exists(part_path): os.remove(part_path)
-                            break
-                            
-                        part_files.append(part_path)
-                        log.info(f"已生成分卷: {part_path}")
-                        part_num += 1
-                
-                os.remove(archive_path)
-                return part_files
-
+            return self._split_if_needed(archive_path, output_dir)
         except Exception as e:
-            log.error(f"压缩失败: {e}")
+            log.error(f"zstd 压缩失败: {e}")
             raise e
+
+    def _backup_7z_lzma(self, file_list: list, is_enc: bool, output_dir: str) -> list:
+        import py7zr
+        archive_path = os.path.join(output_dir, "package.7z")
+        try:
+            log.info(f"正在进行 7z (LZMA2快速模式) 压缩：{archive_path}")
+            filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
+            with py7zr.SevenZipFile(archive_path, 'w', filters=filters, 
+                                    password=config.password if is_enc else None,
+                                    header_encryption=is_enc) as archive:
+                for f in file_list:
+                    if os.path.isfile(f):
+                        archive.write(f, arcname=f)
+            return self._split_if_needed(archive_path, output_dir)
+        except Exception as e:
+            log.error(f"7z 压缩失败: {e}")
+            raise e
+
+    def _split_if_needed(self, archive_path: str, output_dir: str) -> list:
+        split_size = getattr(config, 'split_size', 1024 * 1024 * 1024)
+        full_size = os.path.getsize(archive_path)
+        if split_size > 0 and full_size > split_size:
+            log.info(f"开始分卷切割...")
+            part_files = []
+            part_num = 1
+            with open(archive_path, 'rb') as f:
+                while True:
+                    part_path = f"{archive_path}.{part_num:03d}"
+                    bytes_to_read = split_size
+                    with open(part_path, 'wb') as p:
+                        while bytes_to_read > 0:
+                            chunk = f.read(min(100*1024*1024, bytes_to_read))
+                            if not chunk: break
+                            p.write(chunk)
+                            bytes_to_read -= len(chunk)
+                    if bytes_to_read == split_size:
+                        if os.path.exists(part_path): os.remove(part_path)
+                        break
+                    part_files.append(part_path)
+                    part_num += 1
+            os.remove(archive_path)
+            return part_files
         return [archive_path]
 
     def start_backup(self, is_enc: bool, is_zip: bool, output_dir: str) -> list:
