@@ -389,16 +389,11 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 配置优化过滤器
+            # 配置优化过滤器：使用多线程 LZMA2 以保证最高兼容性
             threads = multiprocessing.cpu_count()
-            if FILTER_ZSTD is not None:
-                # 使用 Zstd 算法，速度最快
-                filters = [{"id": FILTER_ZSTD, "level": 3}]
-                log.info(f"使用 Zstd 压缩算法 (多线程: {threads})")
-            else:
-                # 退而求其次使用多线程 LZMA2
-                filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
-                log.info(f"使用 LZMA2 压缩算法 (多线程: {threads}, preset: 3)")
+            # 即使有 FILTER_ZSTD，我们也优先使用多线程 LZMA2 以避免解压端出现 Unsupported Method
+            filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
+            log.info(f"使用多线程 LZMA2 压缩算法 (线程数: {threads}, 级别: 3)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
                                     filters=filters,
@@ -414,6 +409,29 @@ class FilePack:
                             log_progress()
             
             log.info(f"7z 压缩完成：{archive_path}")
+
+            # 分卷处理
+            split_size = getattr(config, 'split_size', 1024 * 1024 * 1024)  # 默认 1GB
+            full_size = os.path.getsize(archive_path)
+
+            if split_size > 0 and full_size > split_size:
+                log.info(f"文件大小 ({full_size}) 超过分卷设置 ({split_size})，开始分卷切割...")
+                part_files = []
+                part_num = 1
+                with open(archive_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(split_size)
+                        if not chunk:
+                            break
+                        part_path = f"{archive_path}.{part_num:03d}"
+                        with open(part_path, 'wb') as p:
+                            p.write(chunk)
+                        part_files.append(part_path)
+                        log.info(f"已生成分卷: {part_path}")
+                        part_num += 1
+                os.remove(archive_path)  # 删除原大文件
+                return part_files
+
         except Exception as e:
             log.error(f"7z 压缩失败: {e}")
             raise e
