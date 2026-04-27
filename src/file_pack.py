@@ -398,14 +398,12 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 为了兼容宿主机的旧版 7z (不支持 Zstd)，我们统一使用 LZMA2
-            # 开启多线程和较低的 preset 以保证压缩速度
-            threads = multiprocessing.cpu_count()
-            filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
-            log.info(f"使用高兼容性 LZMA2 压缩算法 (多线程: {threads}, 级别: 3)")
+            # 强制使用 LZMA2 算法以确保最高兼容性
+            # 不手动传递 filters 参数，让 py7zr 使用其内部最稳健的默认配置，
+            # 这样可以避免在 Docker 环境中出现 'Invalid filter specifier' 错误。
+            log.info(f"使用 LZMA2 压缩算法 (使用 py7zr 默认稳健配置)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
-                                    filters=filters,
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
                 for f in file_list:
