@@ -398,17 +398,11 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 升级到 Python 3.12 基础镜像后，我们可以重新启用 Zstd 获得极致速度
-            # 同时也保持 LZMA2 作为备选以支持原生 7z 工具
+            # 为了兼容宿主机的旧版 7z (不支持 Zstd)，我们统一使用 LZMA2
+            # 开启多线程和较低的 preset 以保证压缩速度
             threads = multiprocessing.cpu_count()
-            if FILTER_ZSTD is not None:
-                # 使用 Zstd 算法，速度最快，配合 level 3 兼顾压缩比
-                filters = [{"id": FILTER_ZSTD, "level": 3}]
-                log.info(f"使用 Zstd 压缩算法 (多线程: {threads})")
-            else:
-                # 回退到 LZMA2 并尝试开启多线程
-                filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
-                log.info(f"使用 LZMA2 压缩算法 (线程数: {threads}, 级别: 3)")
+            filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
+            log.info(f"使用高兼容性 LZMA2 压缩算法 (多线程: {threads}, 级别: 3)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
                                     filters=filters,
