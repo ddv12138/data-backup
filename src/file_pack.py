@@ -429,20 +429,33 @@ class FilePack:
             full_size = os.path.getsize(archive_path)
 
             if split_size > 0 and full_size > split_size:
-                log.info(f"文件大小 ({full_size}) 超过分卷设置 ({split_size})，开始分卷切割...")
+                log.info(f"文件大小 ({full_size}) 超过分卷设置 ({split_size})，开始快速分卷切割...")
                 part_files = []
                 part_num = 1
+                # 使用较大的缓冲区提升 I/O 效率 (100MB)
+                copy_buffer_size = 100 * 1024 * 1024 
                 with open(archive_path, 'rb') as f:
                     while True:
-                        chunk = f.read(split_size)
-                        if not chunk:
-                            break
                         part_path = f"{archive_path}.{part_num:03d}"
+                        bytes_to_read = split_size
                         with open(part_path, 'wb') as p:
-                            p.write(chunk)
+                            while bytes_to_read > 0:
+                                chunk = f.read(min(copy_buffer_size, bytes_to_read))
+                                if not chunk:
+                                    break
+                                p.write(chunk)
+                                bytes_to_read -= len(chunk)
+                        
+                        if bytes_to_read == split_size: # 说明没读到数据就结束了
+                            os.remove(part_path) 
+                            break
+                            
                         part_files.append(part_path)
                         log.info(f"已生成分卷: {part_path}")
                         part_num += 1
+                        if len(chunk) < min(copy_buffer_size, bytes_to_read + len(chunk)) and bytes_to_read > 0:
+                            break
+                            
                 os.remove(archive_path)  # 删除原大文件
                 return part_files
 
