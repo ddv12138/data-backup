@@ -385,19 +385,31 @@ class FilePack:
                 has_pv = subprocess.run("command -v pv", shell=True, capture_output=True).returncode == 0
                 
                 if has_pv:
-                    # pv -f 强制输出到 stderr，即便不是交互式终端
-                    # pv -p -t -e -r -b 详细参数：进度条、时间、预计完成、速率、字节数
-                    pv_cmd = f"pv -f -p -t -e -r -b -s {total_size} -N '压缩进度'"
+                    # pv -i 1 每秒更新一次
+                    # 2>&1 将 pv 的输出(stderr)转向 stdout，确保能被捕获
+                    pv_cmd = f"pv -n -f -i 1 -s {total_size} -N '压缩进度'"
                     full_cmd = f"{tar_cmd} | {pv_cmd} | {zstd_cmd}"
                 else:
-                    log.warning("未检测到 pv 工具，无法显示实时进度。建议在 Dockerfile 中安装 pv。")
+                    log.warning("未检测到 pv 工具，无法显示实时进度。")
                     full_cmd = f"{tar_cmd} | {zstd_cmd}"
 
                 log.info(f"执行命令: {full_cmd}")
                 
-                # 不捕获 capture_output，让 pv 的 stderr 直接流向宿主机终端
-                # check=True 确保报错时抛出异常
-                subprocess.run(full_cmd, shell=True, check=True)
+                # 使用 Popen 实时读取每一行并用 log.info 打印
+                process = subprocess.Popen(full_cmd, shell=True, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True, bufsize=1)
+                
+                if has_pv:
+                    for line in process.stdout:
+                        line = line.strip()
+                        if line.isdigit():
+                            # pv -n 模式下只输出数字，我们转换成百分比显示
+                            log.info(f"压缩进度: {line}%")
+                        elif line:
+                            log.debug(f"压缩日志: {line}")
+                
+                process.wait()
+                if process.returncode != 0:
+                    raise Exception(f"压缩命令执行失败，退出码: {process.returncode}")
                 
             finally:
                 if os.path.exists(list_name):
