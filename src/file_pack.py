@@ -400,10 +400,6 @@ class FilePack:
             raise e
         finally:
             pass
-        return [] # 保持返回类型一致，虽然这个方法原本似乎没用到返回值
-
-                os.unlink(tmp_path)
-
         return [archive_path]
 
     def start_backup(self, is_enc: bool, is_zip: bool, output_dir: str) -> list:
