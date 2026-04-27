@@ -4,11 +4,17 @@
 ```shell
 pip install requirements.txt
 ```
-### step2 修改配置
+### step2 安装系统依赖（可选）
+若需要使用 7z 备份格式，请先安装 `p7zip-full`：
+```shell
+apt-get install p7zip-full
+```
+
+### step3 修改配置
 1. 修改 [config.py](src/config.py) 或者直接在命令行指定，命令行说明见下方
 2. 修改邮箱配置，用于发送阿里云盘登陆二维码，将 [email_config_example.py](email_config_example.py)重命名为 `email_config.py` 之后修改其中的配置
 
-### step3 运行并查看帮助
+### step4 运行并查看帮助
 ```
 python main.py -h
 ```
@@ -26,6 +32,7 @@ docker push ddv12138/data-backup
    - cloud_path: 备份在阿里云盘的存放位置，程序不会自动创建，需要手动提前创建好
    - cron_expression： 任务执行周期的cron表达式，具体参见 [croniter表达式说明](https://pypi.org/project/croniter/)
    - max_copy_count: 同时保存的最大备份数量，过期的将移入回收站
+   - backup_format: 备份格式，`ddv`（默认，自定义格式，支持加密和压缩）或 `7z`（使用系统 7z 命令，生成标准 `.7z` 文件，兼容所有 7z 客户端）
 2. 如果使用邮箱接收二维码进行登陆验证```(推荐)```,还需要修改配置文件 [email_config_example.py](email_config_example.py)，重命名为 ```email_config.py```
 3. 准备好以上配置文件以后，假设```config.py```中include_list为默认的只有一个 ```backup```,docker启动命令如下
 ```
@@ -73,8 +80,12 @@ docker run --rm ddv12138/data-backup python main.py info -i cache/xxxx-xx-xx_xx.
 ```
 
 ### 使用其他配置
-如果需要自定义是否使用加密，是否使用压缩，日志级别，进度条开关等，可以通过修改config.py，也可以通过命令行参数指定，查看具体的命令行参数可以使用如下命令
+如果需要自定义备份格式、是否使用加密，是否使用压缩，日志级别，进度条开关等，可以通过修改config.py，也可以通过命令行参数指定，查看具体的命令行参数可以使用如下命令
 ```shell
 docker run --rm ddv12138/data-backup python main.py -h
 ```
+
+> **备份格式说明**
+> - `--backup_format ddv`（默认）：使用自定义 ddv 格式，支持 `--disable_enc` / `--disable_zip` 控制加密和压缩。
+> - `--backup_format 7z`：调用系统 `7z` 命令打包，生成标准 `.7z` 文件，兼容所有 7z 客户端。使用 `--disable_enc` 控制是否加密（`--disable_zip` 在此模式下无效，7z 自行处理压缩）。7z 命令执行超时上限为 **3 小时**，适合大体积备份。容器镜像已预装 `p7zip-full`；本地运行时需手动安装：`apt-get install p7zip-full`。
 
