@@ -398,11 +398,20 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 为了修复 'Invalid filter specifier' 和 'NoneType' 错误，使用更稳定的初始化方式
-            # 默认情况下 py7zr 会自动处理多线程和 LZMA2，这在旧版 Python/Docker 中更稳健
-            log.info(f"开始 7z 压缩 (使用标准 LZMA2 算法)")
+            # 升级到 Python 3.12 基础镜像后，我们可以重新启用 Zstd 获得极致速度
+            # 同时也保持 LZMA2 作为备选以支持原生 7z 工具
+            threads = multiprocessing.cpu_count()
+            if FILTER_ZSTD is not None:
+                # 使用 Zstd 算法，速度最快，配合 level 3 兼顾压缩比
+                filters = [{"id": FILTER_ZSTD, "level": 3}]
+                log.info(f"使用 Zstd 压缩算法 (多线程: {threads})")
+            else:
+                # 回退到 LZMA2 并尝试开启多线程
+                filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
+                log.info(f"使用 LZMA2 压缩算法 (线程数: {threads}, 级别: 3)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
+                                    filters=filters,
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
                 for f in file_list:
