@@ -360,7 +360,7 @@ class FilePack:
                 cmd += [f"-p{config.password}", "-mhe=on"]
             log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10800)
             except FileNotFoundError:
                 raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
             if result.returncode != 0:
