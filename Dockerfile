@@ -1,4 +1,4 @@
-FROM python:3.8.5
+FROM python:3.8-slim-bookworm
 WORKDIR /app
 COPY src requirements.txt  /app/
 USER root
