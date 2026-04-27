@@ -395,17 +395,35 @@ class FilePack:
 
                 log.info(f"执行命令: {full_cmd}")
                 
-                # 使用 Popen 实时读取每一行并用 log.info 打印
-                process = subprocess.Popen(full_cmd, shell=True, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True, bufsize=1)
+                # 使用 Popen 启动，bufsize=1 开启行缓冲
+                # stdbuf -oL 强制命令输出为行缓冲，确保 pv 的数字能立刻流出
+                full_cmd_buffered = f"stdbuf -oL {full_cmd}"
+                process = subprocess.Popen(
+                    full_cmd_buffered, 
+                    shell=True, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.STDOUT, 
+                    text=True, 
+                    bufsize=1,
+                    universal_newlines=True
+                )
                 
                 if has_pv:
-                    for line in process.stdout:
-                        line = line.strip()
-                        if line.isdigit():
-                            # pv -n 模式下只输出数字，我们转换成百分比显示
-                            log.info(f"压缩进度: {line}%")
-                        elif line:
-                            log.debug(f"压缩日志: {line}")
+                    try:
+                        while True:
+                            line = process.stdout.readline()
+                            if not line and process.poll() is not None:
+                                break
+                            if line:
+                                content = line.strip()
+                                if content.isdigit():
+                                    # 只有数字时说明是进度
+                                    log.info(f"压缩进度: {content}%")
+                                else:
+                                    # 其他信息（如 zstd 最后的总结）存入 debug
+                                    log.debug(f"压缩详情: {content}")
+                    except Exception as e:
+                        log.error(f"读取进度出错: {e}")
                 
                 process.wait()
                 if process.returncode != 0:
