@@ -432,6 +432,12 @@ class FilePack:
                     self.file_path = file_path
                     self.callback = callback
                     self.fd = open(file_path, 'rb')
+                
+                # 模拟 pathlib.Path 接口，py7zr writeall 会检查是否存在
+                def exists(self): return os.path.exists(self.file_path)
+                def is_file(self): return os.path.isfile(self.file_path)
+                def is_dir(self): return os.path.isdir(self.file_path)
+                def stat(self): return os.stat(self.file_path)
                     
                 def read(self, size=-1):
                     data = self.fd.read(size)
@@ -454,7 +460,8 @@ class FilePack:
                 for f in valid_files:
                     # 通过包装文件对象，实现在读取数据（即写入压缩包）时实时更新进度条
                     with ProgressiveFile(f, bar.update) as pf:
-                        archive.writeall(pf, arcname=f)
+                        # 传入文件名而非 path 对象，让 py7zr 使用我们包装后的流
+                        archive.writeall(pf, f)
             
             if bar:
                 bar.close()
