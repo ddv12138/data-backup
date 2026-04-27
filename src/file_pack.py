@@ -390,7 +390,7 @@ class FilePack:
                         # 保持路径结构
                         archive.write(f, arcname=f)
                         processed_files += 1
-                        processed_size += os.getsize(f)
+                        processed_size += os.path.getsize(f)
                         if show_progress:
                             log_progress()
             
