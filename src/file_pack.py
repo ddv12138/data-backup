@@ -396,7 +396,7 @@ class FilePack:
                                 if pct > last_pct:
                                     bar.update(pct - last_pct)
                                     last_pct = pct
-                                if pct >= last_log_pct + 0.5 or pct == 100:
+                                if pct >= last_log_pct + 0.01 or pct == 100:
                                     log.info(f"7z 压缩进度: {pct}%")
                                     last_log_pct = pct
                             buf = ""
