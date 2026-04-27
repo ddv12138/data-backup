@@ -345,6 +345,13 @@ class FilePack:
             log.info(f"文件总计打包后大小：{file_list.packaged_total_size}")
             log.info(f"打包比例：{file_list.packaged_total_size / file_list.original_total_size}")
 
+    def format_size(self, size):
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f"{size:.2f} {unit}"
+            size /= 1024.0
+        return f"{size:.2f} PB"
+
     def start_backup_7z(self, is_enc: bool, output_dir: str) -> list:
         file_list, ignore_list, err_list = self.fetch_file()
         log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
@@ -374,32 +381,27 @@ class FilePack:
                 list_name = f_list.name
 
             try:
-                # 使用 pv (Pipe Viewer) 监控进度
-                # zstd -3 --threads=0 满载多线程压缩
-                # 如果系统没装 pv，会回退到普通模式
-                pv_cmd = f"pv -s {total_size} -N '压缩进度'"
-                tar_cmd = f"tar -c -P --files-from={list_name}"
-                zstd_cmd = f"zstd -3 --threads=0 -o \"{archive_path}\""
-                
                 # 检查 pv 是否存在
                 has_pv = subprocess.run("command -v pv", shell=True, capture_output=True).returncode == 0
                 
+                # 待处理信息
+                log.info(f"待处理总大小: {self.format_size(total_size)}，文件总数: {len(valid_files)}")
+
                 if has_pv:
-                    # pv -i 1 每秒更新一次
-                    # 2>&1 将 pv 的输出(stderr)转向 stdout，确保能被捕获
+                    # -n: 输出数字百分比 (用于 Python log)
+                    # -f: 强制输出进度
+                    # -i 1: 每秒更新一次
                     pv_cmd = f"pv -n -f -i 1 -s {total_size} -N '压缩进度'"
-                    full_cmd = f"{tar_cmd} | {pv_cmd} | {zstd_cmd}"
+                    full_cmd = f"stdbuf -oL tar -c -P --files-from={list_name} | {pv_cmd} | zstd -3 --threads=0 -o \"{archive_path}\""
                 else:
                     log.warning("未检测到 pv 工具，无法显示实时进度。")
-                    full_cmd = f"{tar_cmd} | {zstd_cmd}"
+                    full_cmd = f"tar -c -P --files-from={list_name} | zstd -3 --threads=0 -o \"{archive_path}\""
 
                 log.info(f"执行命令: {full_cmd}")
                 
-                # 使用 Popen 启动，bufsize=1 开启行缓冲
-                # stdbuf -oL 强制命令输出为行缓冲，确保 pv 的数字能立刻流出
-                full_cmd_buffered = f"stdbuf -oL {full_cmd}"
+                # 重新设计读取逻辑，确保实时捕获
                 process = subprocess.Popen(
-                    full_cmd_buffered, 
+                    full_cmd, 
                     shell=True, 
                     stdout=subprocess.PIPE, 
                     stderr=subprocess.STDOUT, 
@@ -408,22 +410,19 @@ class FilePack:
                     universal_newlines=True
                 )
                 
+                last_pct = -1
                 if has_pv:
-                    try:
-                        while True:
-                            line = process.stdout.readline()
-                            if not line and process.poll() is not None:
-                                break
-                            if line:
-                                content = line.strip()
-                                if content.isdigit():
-                                    # 只有数字时说明是进度
-                                    log.info(f"压缩进度: {content}%")
-                                else:
-                                    # 其他信息（如 zstd 最后的总结）存入 debug
-                                    log.debug(f"压缩详情: {content}")
-                    except Exception as e:
-                        log.error(f"读取进度出错: {e}")
+                    for line in iter(process.stdout.readline, ""):
+                        content = line.strip()
+                        if content.isdigit():
+                            curr_pct = int(content)
+                            if curr_pct > last_pct:
+                                # 计算已处理大小供参考
+                                processed_size = int(total_size * curr_pct / 100)
+                                log.info(f"压缩进度: {curr_pct}% ({self.format_size(processed_size)} / {self.format_size(total_size)})")
+                                last_pct = curr_pct
+                        elif content:
+                            log.debug(f"压缩输出: {content}")
                 
                 process.wait()
                 if process.returncode != 0:
