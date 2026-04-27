@@ -398,14 +398,11 @@ class FilePack:
                         log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
                         last_log_pct = pct
 
-            # 配置优化过滤器：使用多线程 LZMA2 以保证最高兼容性
-            threads = multiprocessing.cpu_count()
-            # 即使有 FILTER_ZSTD，我们也优先使用多线程 LZMA2 以避免解压端出现 Unsupported Method
-            filters = [{"id": FILTER_LZMA2, "preset": 3, "threads": threads}]
-            log.info(f"使用多线程 LZMA2 压缩算法 (线程数: {threads}, 级别: 3)")
+            # 为了修复 'Invalid filter specifier' 和 'NoneType' 错误，使用更稳定的初始化方式
+            # 默认情况下 py7zr 会自动处理多线程和 LZMA2，这在旧版 Python/Docker 中更稳健
+            log.info(f"开始 7z 压缩 (使用标准 LZMA2 算法)")
 
             with py7zr.SevenZipFile(archive_path, 'w', 
-                                    filters=filters,
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
                 for f in file_list:
