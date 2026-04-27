@@ -420,24 +420,23 @@ class FilePack:
         try:
             log.info(f"正在进行 7z (LZMA2快速模式) 压缩：{archive_path}")
             
-            show_progress = getattr(config, 'progress', False)
-            total_size = sum(os.path.getsize(f) for f in file_list if os.path.isfile(f))
+            valid_files = [f for f in file_list if os.path.isfile(f)]
+            total_size = sum(os.path.getsize(f) for f in valid_files)
             
             # 使用最兼容的 LZMA2，Preset 1 换取极高性能
             filters = [{"id": py7zr.FILTER_LZMA2, "preset": 1}]
             
-            bar = None
-            if show_progress:
-                bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩")
+            # 恢复到之前最纯洁的 tqdm 模式，确保 mininterval 设置得小一点以应对快速处理
+            # 增加 dynamic_ncols=True 自动适配 Docker 终端宽度
+            bar = tqdm(total=total_size, colour="green", unit='B', unit_scale=True, unit_divisor=1024, desc="7z 压缩", mininterval=0.1)
 
             with py7zr.SevenZipFile(archive_path, 'w', filters=filters, 
                                     password=config.password if is_enc else None,
                                     header_encryption=is_enc) as archive:
-                for f in file_list:
-                    if os.path.isfile(f):
-                        archive.write(f, arcname=f)
-                        if bar:
-                            bar.update(os.path.getsize(f))
+                for f in valid_files:
+                    archive.write(f, arcname=f)
+                    if bar:
+                        bar.update(os.path.getsize(f))
             
             if bar:
                 bar.close()
