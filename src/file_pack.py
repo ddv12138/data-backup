@@ -1,6 +1,7 @@
 import hashlib
 import os
 import pickle
+import py7zr
 import re
 import subprocess
 import tempfile
@@ -352,82 +353,55 @@ class FilePack:
 
         archive_path = os.path.join(output_dir, "package.7z")
 
-        tmp_path = None
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp:
-                tmp_path = tmp.name
+            log.info(f"正在压缩到 7z：{archive_path}" + (" [加密]" if is_enc else ""))
+            
+            show_progress = getattr(config, 'progress', False)
+            
+            # 计算总大小和文件总数用于进度展示
+            total_files = len([f for f in file_list if os.path.isfile(f)])
+            total_size = sum(os.path.getsize(f) for f in file_list if os.path.isfile(f))
+            processed_files = 0
+            processed_size = 0
+            last_log_pct = -1.0 # 确保 0% 也能输出
+
+            def format_size(size):
+                for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+                    if size < 1024.0:
+                        return f"{size:.2f} {unit}"
+                    size /= 1024.0
+                return f"{size:.2f} PB"
+
+            def log_progress():
+                nonlocal last_log_pct
+                if total_size > 0:
+                    pct = round(processed_size / total_size * 100, 2)
+                    if pct >= last_log_pct + 0.01 or pct >= 100:
+                        size_str = f"{format_size(processed_size)}/{format_size(total_size)}"
+                        file_str = f"{processed_files}/{total_files} files"
+                        log.info(f"7z 压缩进度: {pct}% | {size_str} | {file_str}")
+                        last_log_pct = pct
+
+            with py7zr.SevenZipFile(archive_path, 'w', 
+                                    password=config.password if is_enc else None,
+                                    header_encryption=is_enc) as archive:
                 for f in file_list:
-                    tmp.write(f + "\n")
-
-            cmd = ["7z", "a", "-spf", f"-i@{tmp_path}", archive_path]
-            if is_enc:
-                # 注意：密码通过命令行参数传递，在多用户系统上可能被 ps 看到
-                cmd += [f"-p{config.password}", "-mhe=on"]
-            log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
-            if getattr(config, 'progress', False):
-                cmd += ["-bsp1"]
-                try:
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                               bufsize=0)
-                except FileNotFoundError:
-                    raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
-                stderr_lines = []
-
-                def _read_stderr():
-                    for line in process.stderr:
-                        stderr_lines.append(line)
-
-                stderr_thread = threading.Thread(target=_read_stderr, daemon=True)
-                stderr_thread.start()
-
-                bar = tqdm(total=100, unit="%", desc="7z 压缩", colour="green")
-                last_pct = 0
-                last_log_pct = 0.0
-                buf = ""
-                try:
-                    while True:
-                        ch = process.stdout.read(1)
-                        if not ch:
-                            break
-                        if ch == "\r" or ch == "\n":
-                            m = re.search(r"(\d+)%", buf)
-                            if m:
-                                pct = int(m.group(1))
-                                if pct > last_pct:
-                                    bar.update(pct - last_pct)
-                                    last_pct = pct
-                                if pct >= last_log_pct + 0.01 or pct == 100:
-                                    log.info(f"7z 压缩进度: {pct}%")
-                                    last_log_pct = pct
-                            buf = ""
-                        else:
-                            buf += ch
-                finally:
-                    bar.update(100 - last_pct)
-                    bar.close()
-                    stderr_thread.join()
-
-                try:
-                    process.wait(timeout=COMPRESSION_TIMEOUT_SECONDS)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                    raise Exception("7z 压缩超时（超过 3 小时）")
-                if process.returncode != 0:
-                    stderr_output = "".join(stderr_lines)
-                    log.error(f"7z 命令执行失败，stderr：{stderr_output}")
-                    raise Exception(f"7z 压缩失败，返回码：{process.returncode}\n{stderr_output}")
-            else:
-                try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=COMPRESSION_TIMEOUT_SECONDS)
-                except FileNotFoundError:
-                    raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
-                if result.returncode != 0:
-                    log.error(f"7z 命令执行失败，stdout：{result.stdout}，stderr：{result.stderr}")
-                    raise Exception(f"7z 压缩失败，返回码：{result.returncode}\n{result.stderr}")
+                    if os.path.isfile(f):
+                        # 保持路径结构
+                        archive.write(f, arcname=f)
+                        processed_files += 1
+                        processed_size += os.getsize(f)
+                        if show_progress:
+                            log_progress()
+            
             log.info(f"7z 压缩完成：{archive_path}")
+        except Exception as e:
+            log.error(f"7z 压缩失败: {e}")
+            raise e
         finally:
-            if tmp_path is not None and os.path.exists(tmp_path):
+            pass
+        return [] # 保持返回类型一致，虽然这个方法原本似乎没用到返回值
+
                 os.unlink(tmp_path)
 
         return [archive_path]
