@@ -379,8 +379,17 @@ class FilePack:
                     size /= 1024.0
                 return f"{size:.2f} PB"
 
-            def log_progress():
-                nonlocal last_log_pct
+            # 进度条处理
+            bar = None
+            if show_progress:
+                bar = tqdm(total=total_size, colour="green", unit='byte', desc="7z 压缩")
+
+            def log_progress(added_size):
+                nonlocal last_log_pct, processed_size
+                processed_size += added_size
+                if bar:
+                    bar.update(added_size)
+                
                 if total_size > 0:
                     pct = round(processed_size / total_size * 100, 2)
                     if pct >= last_log_pct + 0.01 or pct >= 100:
@@ -404,9 +413,11 @@ class FilePack:
                         # 保持路径结构
                         archive.write(f, arcname=f)
                         processed_files += 1
-                        processed_size += os.path.getsize(f)
-                        if show_progress:
-                            log_progress()
+                        file_size = os.path.getsize(f)
+                        log_progress(file_size)
+            
+            if bar:
+                bar.close()
             
             log.info(f"7z 压缩完成：{archive_path}")
 
