@@ -1,6 +1,8 @@
 import hashlib
 import os
 import pickle
+import subprocess
+import tempfile
 
 from tqdm import tqdm
 
@@ -329,6 +331,47 @@ class FilePack:
             log.info(f"文件总计原始大小：{file_list.original_total_size}")
             log.info(f"文件总计打包后大小：{file_list.packaged_total_size}")
             log.info(f"打包比例：{file_list.packaged_total_size / file_list.original_total_size}")
+
+    def start_backup_7z(self, is_enc: bool, output_dir: str) -> list:
+        file_list, ignore_list, err_list = self.fetch_file()
+        log.info(f"找到{len(file_list)}个文件，忽略{len(ignore_list)}个文件，{len(err_list)}个文件出错")
+        if len(ignore_list) > 0:
+            log.debug(f"忽略的文件：{ignore_list}")
+        if len(err_list) > 0:
+            log.error(f"出错的文件：{err_list}")
+        if not file_list:
+            raise Exception("未找到任何文件，请检查配置！")
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        archive_path = os.path.join(output_dir, "package.7z")
+
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp:
+                tmp_path = tmp.name
+                for f in file_list:
+                    tmp.write(f + "\n")
+
+            cmd = ["7z", "a", "-spf", f"-i@{tmp_path}", archive_path]
+            if is_enc:
+                # 注意：密码通过命令行参数传递，在多用户系统上可能被 ps 看到
+                cmd += [f"-p{config.password}", "-mhe=on"]
+            log.info(f"执行 7z 命令：7z a -spf -i@<listfile> {archive_path}" + (" [加密]" if is_enc else ""))
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+            except FileNotFoundError:
+                raise Exception("未找到 7z 命令，请安装 p7zip-full 后重试（apt-get install p7zip-full）")
+            if result.returncode != 0:
+                log.error(f"7z 命令执行失败，stdout：{result.stdout}，stderr：{result.stderr}")
+                raise Exception(f"7z 压缩失败，返回码：{result.returncode}\n{result.stderr}")
+            log.info(f"7z 压缩完成：{archive_path}")
+        finally:
+            if tmp_path is not None and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+        return [archive_path]
 
     def start_backup(self, is_enc: bool, is_zip: bool, output_dir: str) -> list:
         file_list, ignore_list, err_list = self.fetch_file()
