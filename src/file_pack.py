@@ -385,6 +385,9 @@ class FilePack:
                 has_pv = subprocess.run("command -v pv", shell=True, capture_output=True).returncode == 0
                 
                 if has_pv:
+                    # pv -f 强制输出到 stderr，即便不是交互式终端
+                    # pv -p -t -e -r -b 详细参数：进度条、时间、预计完成、速率、字节数
+                    pv_cmd = f"pv -f -p -t -e -r -b -s {total_size} -N '压缩进度'"
                     full_cmd = f"{tar_cmd} | {pv_cmd} | {zstd_cmd}"
                 else:
                     log.warning("未检测到 pv 工具，无法显示实时进度。建议在 Dockerfile 中安装 pv。")
@@ -392,8 +395,9 @@ class FilePack:
 
                 log.info(f"执行命令: {full_cmd}")
                 
-                # 使用 subprocess.run 时，如果是 shell 模式，stdout 会流向终端显示 pv 的进度条
-                result = subprocess.run(full_cmd, shell=True, check=True)
+                # 不捕获 capture_output，让 pv 的 stderr 直接流向宿主机终端
+                # check=True 确保报错时抛出异常
+                subprocess.run(full_cmd, shell=True, check=True)
                 
             finally:
                 if os.path.exists(list_name):
