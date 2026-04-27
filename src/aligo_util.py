@@ -23,6 +23,9 @@ class AligoUtil:
 
     def upload_backup(self, file: str):
         cloud_path = self.aligo.get_folder_by_path(config.cloud_path)
+        if cloud_path is None:
+            log.info(f"云端目录 {config.cloud_path} 不存在，正在创建...")
+            cloud_path = self.aligo.get_folder_by_path(config.cloud_path, create_folder=True)
         log.info("开始上传: " + file + "--->" + str(cloud_path))
         # 不能包含字符 /*?:<>\"|
         self.aligo.upload_folder(file, parent_file_id=cloud_path.file_id)
@@ -31,6 +34,8 @@ class AligoUtil:
 
     def history(self):
         cloud_path = self.aligo.get_folder_by_path(config.cloud_path)
+        if cloud_path is None:
+            return []
         return self.aligo.get_file_list(parent_file_id=cloud_path.file_id)
 
     def history_check(self, ):

@@ -147,7 +147,7 @@ class FilePack:
                 file_meta.packaged_total_size += f.packed_size
             log.info(f"源文件总计大小：{file_meta.original_total_size},"
                      f"处理后总计大小：{file_meta.packaged_total_size},"
-                     f"比例：{file_meta.packaged_total_size / file_meta.original_total_size}")
+                     f"比例：{file_meta.packaged_total_size / file_meta.original_total_size if file_meta.original_total_size > 0 else 'N/A'}")
             files_info_dumps = pickle.dumps(file_meta)
             file_meta_len = len(files_info_dumps)
             file_meta_len_to_bytes = file_meta_len.to_bytes(4, "big")
