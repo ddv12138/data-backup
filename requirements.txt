@@ -2,4 +2,5 @@ aligo==6.1.8
 croniter==1.4.1
 cryptography==41.0.3
 pyzstd==0.15.9
-tqdm~=4.66.1py7zr
+tqdm~=4.66.1
+py7zr
