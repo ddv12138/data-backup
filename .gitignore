@@ -4,3 +4,4 @@ cache
 backup
 src/email_config.py
 aligo_config
+.DS_Store
